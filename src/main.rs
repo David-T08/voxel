@@ -9,8 +9,9 @@ mod chunk_renderer;
 #[derive(Component)]
 struct Player;
 
-fn get_movement_vec(keyboard: &Res<ButtonInput<KeyCode>>) -> (f32, f32) {
+fn get_movement_vec(keyboard: &Res<ButtonInput<KeyCode>>) -> (f32, f32, f32) {
     let mut dx: f32 = 0.0;
+    let mut dy: f32 = 0.0;
     let mut dz: f32 = 0.0;
     
     if keyboard.pressed(KeyCode::KeyW) {
@@ -21,6 +22,14 @@ fn get_movement_vec(keyboard: &Res<ButtonInput<KeyCode>>) -> (f32, f32) {
         dx += 1.;
     }
     
+    if keyboard.pressed(KeyCode::KeyE) {
+        dy += 1.;
+    }
+    
+    if keyboard.pressed(KeyCode::KeyQ) {
+        dy -= 1.;
+    }
+    
     if keyboard.pressed(KeyCode::KeyA) {
         dz -= 1.;
     }
@@ -29,12 +38,13 @@ fn get_movement_vec(keyboard: &Res<ButtonInput<KeyCode>>) -> (f32, f32) {
         dz += 1.;
     }
     
-    (dz, dx)
+    (dz, dy, dx)
 }
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(chunk_renderer::ChunkRendererPlugin)
         .add_systems(Startup, (setup, lock_cursor))
         .add_systems(Update, (player_look, player_move))
         .run();
@@ -58,7 +68,7 @@ fn player_look(
     }
     
     let dt = time.delta_secs();
-    let sens = 100. / window.width().min(window.height());
+    let sens = 200. / window.width().min(window.height());
 
     let (mut yaw, mut pitch, _) = player.rotation.to_euler(EulerRot::YXZ);
     pitch -= motion.delta.y * dt * sens;
@@ -72,12 +82,12 @@ fn player_move(
     mut player: Single<&mut Transform, With<Player>>,
     keyboard: Res<ButtonInput<KeyCode>>
 ) {
-    let (dx, dz) = get_movement_vec(&keyboard);
+    let (dx, dy, dz) = get_movement_vec(&keyboard);
     let (yaw, _, _) = player.rotation.to_euler(EulerRot::YXZ);
 
-    let speed = 0.35;
+    let speed = if keyboard.pressed(KeyCode::ShiftLeft) { 0.025 } else {0.075};
     
-    player.translation += Vec3::new(dx * speed, 0., dz * speed)
+    player.translation += Vec3::new(dx * speed, dy * speed, dz * speed)
         .rotate_axis(Vec3::Y, yaw);
 }
 

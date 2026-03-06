@@ -4,7 +4,7 @@ pub const CHUNK_SIZE: usize = 16;
 const CHUNK_VOLUME: usize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
 #[derive(Component)]
-pub struct ChunkPos(IVec3);
+pub struct ChunkPos(pub IVec3);
 
 #[derive(Component)]
 pub struct ChunkData {
@@ -24,12 +24,21 @@ impl ChunkData {
     pub fn index(x: usize, y: usize, z: usize) -> usize {
         x + CHUNK_SIZE * (y + CHUNK_SIZE * z)
     }
+    
+    pub fn index_to_local_pos(i: usize) -> (usize, usize, usize) {
+        let x = i % CHUNK_SIZE;
+        let y = (i / CHUNK_SIZE) % CHUNK_SIZE;
+        let z = i / (CHUNK_SIZE * CHUNK_SIZE);
+        (x, y, z)
+    }
 
     pub fn get(&self, x: usize, y: usize, z: usize) -> u16 {
+        debug_assert!(x < CHUNK_SIZE && y < CHUNK_SIZE && z < CHUNK_SIZE);
         self.blocks[Self::index(x, y, z)]
     }
 
     pub fn set(&mut self, x: usize, y: usize, z: usize, block: u16) {
+        debug_assert!(x < CHUNK_SIZE && y < CHUNK_SIZE && z < CHUNK_SIZE);
         let i = Self::index(x, y, z);
         self.blocks[i] = block;
     }
