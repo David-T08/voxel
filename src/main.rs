@@ -5,6 +5,7 @@ mod voxel;
 mod chunk;
 mod blocks;
 mod chunk_renderer;
+mod textures;
 
 #[derive(Component)]
 struct Player;
@@ -45,6 +46,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(chunk_renderer::ChunkRendererPlugin)
+        .add_plugins(textures::TexturePlugin)
         .add_systems(Startup, (setup, lock_cursor))
         .add_systems(Update, (player_look, player_move))
         .run();
