@@ -26,10 +26,8 @@ impl RegistryId for BlockId {
 
 #[derive(Debug, Clone)]
 pub struct BlockDefinition {
-    textures: BlockTextures
+    pub textures: BlockTextures
 }
-
-
 
 #[derive(Resource, Default)]
 pub struct BlockRegistry {

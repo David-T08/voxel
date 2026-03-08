@@ -5,17 +5,15 @@ use jsonc_parser::parse_to_serde_value;
 
 pub mod registry;
 
-use crate::{
-    blocks::registry::{BlockRegistry, BlockId}, 
-    textures::{BlockDefinitionAsset, BlockTextureRegistry, BlockTextureRegistryReady}
-};
+use crate::textures::{BlockDefinitionAsset, BlockTextureRegistry, BlockTextureRegistryReady};
+pub use registry::{BlockRegistry, BlockId};
 
 pub const AIR_ID: BlockId = BlockId(0);
 
 pub struct BlockPlugin;
 impl Plugin for BlockPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<registry::BlockRegistry>();
+        app.init_resource::<BlockRegistry>();
         
         app.add_systems(
             Update, 
@@ -27,7 +25,7 @@ impl Plugin for BlockPlugin {
 }
 
 #[derive(Resource)]
-struct BlockRegistryReady;
+pub struct BlockRegistryReady;
 
 fn load_block_definitions(
     mut commands: Commands,

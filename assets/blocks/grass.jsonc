@@ -1,0 +1,7 @@
+{
+  "textures": {
+    "top": "core:grass_block_top",
+    "side": "core:grass_block_side",
+    "bottom": "core:grass_block_side"
+  }
+}

@@ -2,11 +2,11 @@ use bevy::{input::mouse::AccumulatedMouseMotion, prelude::*, window::{CursorOpti
 use std::f32::consts::PI;
 
 mod voxel;
-mod chunk;
+mod chunks;
 mod blocks;
-mod chunk_renderer;
 mod textures;
 mod registry_base;
+mod debugging;
 
 #[derive(Component)]
 struct Player;
@@ -46,9 +46,10 @@ fn get_movement_vec(keyboard: &Res<ButtonInput<KeyCode>>) -> (f32, f32, f32) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(chunk_renderer::ChunkRendererPlugin)
+        .add_plugins(chunks::ChunkPlugin)
         .add_plugins(textures::TexturePlugin)
         .add_plugins(blocks::BlockPlugin)
+        .add_plugins(debugging::DebuggingPlugin)
         .add_systems(Startup, (setup, lock_cursor))
         .add_systems(Update, (player_look, player_move))
         .run();
@@ -84,15 +85,20 @@ fn player_look(
 
 fn player_move(
     mut player: Single<&mut Transform, With<Player>>,
+    time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>
 ) {
+    let dt = time.delta_secs();
     let (dx, dy, dz) = get_movement_vec(&keyboard);
     let (yaw, _, _) = player.rotation.to_euler(EulerRot::YXZ);
 
-    let speed = if keyboard.pressed(KeyCode::ShiftLeft) { 0.025 } else {0.075};
+    let speed = if keyboard.pressed(KeyCode::ShiftLeft) { 4. } else {12.} * dt;
     
-    player.translation += Vec3::new(dx * speed, dy * speed, dz * speed)
-        .rotate_axis(Vec3::Y, yaw);
+    player.translation += Vec3::new(dx, dy, dz)
+        // .normalize()
+        .rotate_axis(Vec3::Y, yaw)
+        * speed
+    ;
 }
 
 fn setup(
@@ -101,19 +107,11 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     commands.spawn((Camera3d::default(), Player));
-    commands.spawn(DirectionalLight::default());
-    
-    let mesh = meshes.add(Sphere::new(1.0));
-    for h in 0..16 {
-        let material = materials.add(StandardMaterial {
-            base_color: Color::hsl((h as f32 / 16.0) * 360.0, 1.0, 0.5),
+    commands.spawn((
+        DirectionalLight::default(),
+        Transform {
+            rotation: Quat::from_euler(EulerRot::XYZ, -PI/13.0, PI/6., 0.),
             ..Default::default()
-        });
-        
-        commands.spawn((
-                Transform::from_xyz(h as f32 * 2. - 12.0, 0.5, -50.),
-                Mesh3d(mesh.clone()),
-                MeshMaterial3d(material),
-            ));
-    }
+        }
+    ));
 }

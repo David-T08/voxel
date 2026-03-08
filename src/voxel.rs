@@ -1,2 +1,1 @@
-pub const VOXEL_SIZE: f32 = 1.0;
-pub type BlockId = u16;
+pub const VOXEL_SIZE: i32 = 1;

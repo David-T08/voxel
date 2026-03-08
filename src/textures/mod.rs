@@ -8,6 +8,17 @@ pub mod atlas;
 use atlas::{UnbuiltBlockAtlas, BlockAtlas};
 pub use registry::{BlockTextureRegistry, BlockTextureId};
 
+#[repr(u8)]
+#[derive(Copy, Clone)]
+pub enum Face {
+    Top = 0,
+    Bottom = 1,
+    Front = 2,
+    Back = 3,
+    Left = 4,
+    Right = 5,
+}
+
 #[derive(Resource, Default)]
 pub struct BlockTextureRegistryReady;
 
@@ -139,6 +150,19 @@ impl BlockTextures {
             self.right
         ]
         .into_iter()
+    }
+    
+    pub fn get_uvs(&self, atlas: &BlockAtlas) -> [[[f32; 2]; 4]; 6] {
+        [
+            atlas.face_uvs(self.top).unwrap(),
+            atlas.face_uvs(self.bottom).unwrap(),
+            
+            atlas.face_uvs(self.front).unwrap(),
+            atlas.face_uvs(self.back).unwrap(),
+            
+            atlas.face_uvs(self.left).unwrap(),
+            atlas.face_uvs(self.right).unwrap(),
+        ]
     }
 }
 
