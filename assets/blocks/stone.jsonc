@@ -1,0 +1,12 @@
+{
+  "textures": {
+    "top": "core:grass_top",
+    "bottom": "core:grass_bottom",
+    "front": "core:grass_front",
+    "back": "core:grass_back",
+    "left": "core:grass_left",
+    "right": "core:grass_right"
+    
+    //"side": "base:grass_side",
+  }
+}

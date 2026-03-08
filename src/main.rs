@@ -6,6 +6,7 @@ mod chunk;
 mod blocks;
 mod chunk_renderer;
 mod textures;
+mod registry_base;
 
 #[derive(Component)]
 struct Player;
@@ -47,6 +48,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(chunk_renderer::ChunkRendererPlugin)
         .add_plugins(textures::TexturePlugin)
+        .add_plugins(blocks::BlockPlugin)
         .add_systems(Startup, (setup, lock_cursor))
         .add_systems(Update, (player_look, player_move))
         .run();
