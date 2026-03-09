@@ -9,8 +9,16 @@ pub struct PlayerController {
     pub run_speed: f32,
     pub gravity: f32,
     pub grounded: bool,
+    
     pub jump_force: f32,
     pub jump_requested: bool,
+    pub holding_jump: bool,
+    
+    pub crouching: bool,
+    pub sprinting: bool,
+    
+    // debug
+    pub flying: bool,
     
     pub target_horiz_velocity: Vec2,
     pub current_velocity: Vec3
@@ -32,6 +40,11 @@ pub fn tick(
     for cmd in cmds {
         apply_cmd(&mut controller, cmd);
     }
+    
+    controller.flying = input.set_fly;
+    controller.holding_jump = input.jump_held;
+    
+    controller.crouching = input.crouch;
 
     if input.jump_pressed && controller.grounded {
         controller.jump_requested = true;
@@ -40,7 +53,7 @@ pub fn tick(
 }
 
 fn apply_cmd(
-    mut controller: &mut PlayerController,
+    controller: &mut PlayerController,
     cmd: MoveCmd
 ) {
     match cmd {

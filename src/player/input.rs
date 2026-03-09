@@ -10,6 +10,8 @@ pub struct MoveInput {
     pub sprint: bool,
     pub crouch: bool,
     
+    pub set_fly: bool,
+    
     last_forward_press_time: f32,
 }
 
@@ -45,6 +47,10 @@ fn capture_movement(
         } else {
             movement.last_forward_press_time = now
         }
+    }
+    
+    if keyboard.just_pressed(KeyCode::F2) {
+        movement.set_fly = !movement.set_fly;
     }
     
     if keyboard.just_pressed(KeyCode::Space) {

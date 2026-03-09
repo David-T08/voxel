@@ -37,17 +37,29 @@ pub fn step(
     );
 
     if controller.jump_requested && controller.grounded {
-        controller.current_velocity.y = controller.jump_force;
+        if !controller.flying {
+            controller.current_velocity.y = controller.jump_force;
+        }
+        
         controller.jump_requested = false;
     }
     
-    if !controller.grounded {
+    if !controller.grounded && !controller.flying {
         controller.current_velocity.y -= controller.gravity * dt;
     }
     
     player.translation += controller.current_velocity * dt;
     
-    if player.translation.y <= 0.0 {
+    if controller.flying {
+        controller.current_velocity.y = 0.0;
+        controller.grounded = false;
+        player.translation.y += (
+            controller.holding_jump as i8 as f32 -
+            controller.crouching as i8 as f32
+        ) * dt * 6.5
+    }
+    
+    if player.translation.y <= 0.0 && !controller.flying  {
         player.translation.y = 0.0;
         
         if controller.current_velocity.y < 0.0 {

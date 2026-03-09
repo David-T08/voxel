@@ -35,9 +35,17 @@ fn spawn_player(
             walk_speed: 6.0,
             run_speed: 12.0,
             gravity: 20.0,
+            
             grounded: false,
+            flying: false,
+    
+            crouching: false,
+            sprinting: false,
+            
             jump_force: 6.5,
             jump_requested: false,
+            holding_jump: false,
+            
             target_horiz_velocity: Vec2::ZERO,
             current_velocity: Vec3::ZERO
         }
