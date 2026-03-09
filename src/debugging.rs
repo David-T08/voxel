@@ -1,5 +1,7 @@
 use bevy::{diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin}, prelude::*};
 
+use crate::{chunks::ChunkData, player::Player};
+
 pub struct DebuggingPlugin;
 impl Plugin for DebuggingPlugin {
     fn build(&self, app: &mut App) {
@@ -42,21 +44,24 @@ pub struct DebugRenderStats {
 fn update_debug_text(
     diagnostics: Res<DiagnosticsStore>,
     stats: Res<DebugRenderStats>,
-    mut query: Query<&mut Text, With<DebugText>>,
+    mut text: Query<&mut Text, With<DebugText>>,
+    player: Single<&Transform, With<Player>>
 ) {
     let fps = diagnostics
         .get(&FrameTimeDiagnosticsPlugin::FPS)
         .and_then(|d| d.smoothed())
         .unwrap_or(0.0);
 
-    for mut text in &mut query {
+    for mut text in &mut text {
         *text = Text::new(format!(
-            "FPS: {:.1}\nMeshes: {}\nFaces: {}\nTriangles: {}\nVertices: {}",
+            "FPS: {:.1}\nMeshes: {}\nFaces: {}\nTriangles: {}\nVertices: {}\n\nPosition: {}\nChunk Position: {}",
             fps,
             stats.meshes,
             stats.faces,
             stats.triangles,
             stats.vertices,
+            player.translation.floor(),
+            ChunkData::world_to_chunk_pos(player.translation.floor())
         ));
     }
 }

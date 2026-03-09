@@ -1,5 +1,5 @@
 use bevy::{asset::RenderAssetUsages, mesh::Indices, prelude::*};
-use crate::{blocks::{AIR_ID, BlockId, BlockRegistry, BlockRegistryReady}, chunks::{CHUNK_SIZE, CHUNK_VOLUME}, debugging::DebugRenderStats, textures::atlas::BlockAtlas};
+use crate::{blocks::{AIR_ID, BlockId, BlockRegistry, BlockRegistryReady}, chunks::{CHUNK_SIZE, CHUNK_VOLUME}, debugging::DebugRenderStats, textures::{Face, atlas::BlockAtlas}};
 use super::{ChunkData, ChunkPos, NeedsRemesh};
 
 use crate::voxel::VOXEL_SIZE;
@@ -13,6 +13,114 @@ impl Plugin for ChunkRendererPlugin {
                 .run_if(resource_exists::<BlockRegistryReady>)
                 .run_if(resource_exists::<BlockAtlas>)
         );
+    }
+}
+
+#[derive(Default)]
+struct ChunkMeshBuilder {
+    uv_lookup: [[[f32; 2]; 4]; 6],
+    
+    pub vertices: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    pub uvs: Vec<[f32; 2]>,
+    pub indices: Vec<u32>,
+}
+
+impl ChunkMeshBuilder {
+    pub fn set_uv_lookup(&mut self, lookup: [[[f32; 2]; 4]; 6]) {
+        self.uv_lookup = lookup;
+    }
+    
+    #[rustfmt::skip]
+    pub fn add_face(&mut self, f: Face, x: usize, y: usize, z: usize) {
+        let f = f as usize;
+        
+        const POSITIONS: [[[f32; 3]; 4]; 6] = [
+            // Top face
+            [
+                [-0.5,  0.5,  0.5], // BL
+                [ 0.5,  0.5,  0.5], // BR
+                [ 0.5,  0.5, -0.5], // TR
+                [-0.5,  0.5, -0.5], // TL  
+            ],
+            
+            // Bottom face
+            [
+                [-0.5, -0.5, -0.5], // BL
+                [ 0.5, -0.5, -0.5], // BR
+                [ 0.5, -0.5,  0.5], // TR
+                [-0.5, -0.5,  0.5], // TL
+            ],
+            
+            // Front face
+            [
+                [-0.5, -0.5,  0.5], // BL
+                [ 0.5, -0.5,  0.5], // BR
+                [ 0.5,  0.5,  0.5], // TR
+                [-0.5,  0.5,  0.5], // TL
+            ],
+            
+            // Back face
+            [
+                [ 0.5, -0.5, -0.5], // BL
+                [-0.5, -0.5, -0.5], // BR
+                [-0.5,  0.5, -0.5], // TR
+                [ 0.5,  0.5, -0.5], // TL
+            ],
+            
+            // Left face
+            [
+                [-0.5, -0.5, -0.5],
+                [-0.5, -0.5,  0.5],
+                [-0.5,  0.5,  0.5],
+                [-0.5,  0.5, -0.5],
+            ],
+            
+            // Right face
+            [
+                [0.5, -0.5,  0.5],
+                [0.5, -0.5, -0.5],
+                [0.5,  0.5, -0.5],
+                [0.5,  0.5,  0.5],
+            ]
+        ];
+        
+        const NORMALS: [[f32; 3]; 6] = [
+            [ 0.0,  1.0,  0.0],
+            [ 0.0, -1.0,  0.0],
+            [ 0.0,  0.0,  1.0],
+            [ 0.0,  0.0, -1.0],
+            [-1.0,  0.0,  0.0],
+            [ 1.0,  0.0,  0.0],
+        ];
+        
+        let vi = self.vertices.len() as u32;
+        for p in POSITIONS[f] {
+            self.vertices.push([
+                p[0] + x as f32 + 0.5,
+                p[1] + y as f32 + 0.5,
+                p[2] + z as f32 + 0.5,
+            ]);
+
+            self.normals.push(NORMALS[f]);
+        }
+        
+        self.uvs.extend_from_slice(&self.uv_lookup[f]);
+        self.indices.extend_from_slice(&[
+            vi, vi + 1, vi + 2,
+            vi, vi + 2, vi + 3,
+        ]);
+    }
+    
+    pub fn build(self) -> Mesh {
+        Mesh::new(
+            bevy::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, self.vertices)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs)
+        .with_inserted_indices(Indices::U32(self.indices))
     }
 }
 
@@ -42,164 +150,61 @@ fn render_dirty_chunks(
     atlas: Res<BlockAtlas>,
 ) {
     for (entity, chunk, chunk_pos) in chunks {
+        let mut builder = ChunkMeshBuilder::default();
+        
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 for z in 0..CHUNK_SIZE {
                     let i = ChunkData::index(x as usize,y as usize,z as usize);
                     let block = chunk.blocks[i];
                     
-                    let (x, y, z) = (x as isize, y as isize, z as isize);
-                    
                     if block == AIR_ID {
                         continue;
                     }
-
-                    let visible = {
-                        let mut faces = [false; 6];
-                        
-                        if is_air(&chunk.blocks, x, y + 1, z) { faces[0] = true; }
-                        if is_air(&chunk.blocks, x, y - 1, z) { faces[1] = true; }
-                        if is_air(&chunk.blocks, x, y, z + 1) { faces[2] = true; }
-                        if is_air(&chunk.blocks, x, y, z - 1) { faces[3] = true; }
-                        if is_air(&chunk.blocks, x - 1, y, z) { faces[4] = true; }
-                        if is_air(&chunk.blocks, x + 1, y, z) { faces[5] = true; }
-                        
-                        faces
-                    };
                     
-                    let world_pos = ChunkData::index_to_world_pos(i, chunk_pos);
-        
                     let block_data = block_reg.definitions.get(block).expect("Expected block {block} to exist!");
                     let uvs = block_data.textures.get_uvs(&atlas);
                     
-                    let mesh = meshes.add(build_cube_mesh(uvs, visible, &mut debug_stats));
+                    builder.set_uv_lookup(uvs);
                     
-                    let material = materials.add(StandardMaterial {
-                        base_color_texture: Some(atlas.atlas.clone()),
-                        ..Default::default()
-                    });
+                    let (ix, iy, iz) = (x as isize, y as isize, z as isize);
                     
-                    commands.spawn((
-                        Mesh3d(mesh),
-                        MeshMaterial3d(material),
-                        Transform {
-                            translation: world_pos.as_vec3(),
-                            scale: Vec3::splat(VOXEL_SIZE as f32),
-                            ..Default::default()
-                        },
-                    ));
+                    if is_air(&chunk.blocks, ix, iy + 1, iz) { builder.add_face(Face::Top, x, y, z); }
+                    if is_air(&chunk.blocks, ix, iy - 1, iz) { builder.add_face(Face::Bottom, x, y, z); }
+                    if is_air(&chunk.blocks, ix, iy, iz + 1) { builder.add_face(Face::Front, x, y, z); }
+                    if is_air(&chunk.blocks, ix, iy, iz - 1) { builder.add_face(Face::Back, x, y, z); }
+                    if is_air(&chunk.blocks, ix - 1, iy, iz) { builder.add_face(Face::Left, x, y, z); }
+                    if is_air(&chunk.blocks, ix + 1, iy, iz) { builder.add_face(Face::Right, x, y, z); }
                 }
             }
         }
         
+        let vert_count = builder.vertices.len();
+        let faces = vert_count / 4;
+        let triangles = vert_count / 2;
+        
+        debug_stats.faces += faces as u64;
+        debug_stats.vertices += vert_count as u64;
+        debug_stats.triangles += triangles as u64;
+        debug_stats.meshes += 1;
+        
+        let mesh = meshes.add(builder.build());
+        
+        let material = materials.add(StandardMaterial {
+            base_color_texture: Some(atlas.atlas.clone()),
+            ..Default::default()
+        });
+        
+        commands.spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(material),
+            Transform {
+                translation: chunk_pos.as_vec3() * CHUNK_SIZE as f32,
+                scale: Vec3::splat(VOXEL_SIZE as f32),
+                ..Default::default()
+            },
+        ));
+        
         commands.entity(entity).remove::<NeedsRemesh>();
     }
-}
-
-#[rustfmt::skip]
-fn build_cube_mesh(
-    face_uvs: [[ [f32;2]; 4]; 6],
-    visible: [bool; 6],
-    debug_stats: &mut DebugRenderStats
-) -> Mesh {
-    const POSITIONS: [[[f32; 3]; 4]; 6] = [
-        // Top face
-        [
-            [-0.5,  0.5,  0.5], // BL
-            [ 0.5,  0.5,  0.5], // BR
-            [ 0.5,  0.5, -0.5], // TR
-            [-0.5,  0.5, -0.5], // TL  
-        ],
-        
-        // Bottom face
-        [
-            [-0.5, -0.5, -0.5], // BL
-            [ 0.5, -0.5, -0.5], // BR
-            [ 0.5, -0.5,  0.5], // TR
-            [-0.5, -0.5,  0.5], // TL
-        ],
-        
-        // Front face
-        [
-            [-0.5, -0.5,  0.5], // BL
-            [ 0.5, -0.5,  0.5], // BR
-            [ 0.5,  0.5,  0.5], // TR
-            [-0.5,  0.5,  0.5], // TL
-        ],
-        
-        // Back face
-        [
-            [ 0.5, -0.5, -0.5], // BL
-            [-0.5, -0.5, -0.5], // BR
-            [-0.5,  0.5, -0.5], // TR
-            [ 0.5,  0.5, -0.5], // TL
-        ],
-        
-        // Left face
-        [
-            [-0.5, -0.5, -0.5],
-            [-0.5, -0.5,  0.5],
-            [-0.5,  0.5,  0.5],
-            [-0.5,  0.5, -0.5],
-        ],
-        
-        // Right face
-        [
-            [0.5, -0.5,  0.5],
-            [0.5, -0.5, -0.5],
-            [0.5,  0.5, -0.5],
-            [0.5,  0.5,  0.5],
-        ]
-    ];
-    
-    const NORMALS: [[f32; 3]; 6] = [
-        [ 0.0,  1.0,  0.0],
-        [ 0.0, -1.0,  0.0],
-        [ 0.0,  0.0,  1.0],
-        [ 0.0,  0.0, -1.0],
-        [-1.0,  0.0,  0.0],
-        [ 1.0,  0.0,  0.0],
-    ];
-    
-    let mut positions = Vec::with_capacity(24);
-    let mut normals = Vec::with_capacity(24);
-    let mut uvs = Vec::with_capacity(24);
-    let mut indices = Vec::with_capacity(36);
-    
-    let mut base_index: u32 = 0;
-    
-    for face in 0..6 {
-        if !visible[face] {
-            continue;
-        }
-        
-        debug_stats.faces += 1;
-        debug_stats.triangles += 2;
-        debug_stats.vertices += 4;
-        
-        positions.extend_from_slice(&POSITIONS[face]);
-        uvs.extend_from_slice(&face_uvs[face]);
-        
-        for _ in 0..4 {
-            normals.push(NORMALS[face]);
-        }
-        
-        indices.extend_from_slice(&[
-            base_index, base_index + 1, base_index + 2,
-            base_index, base_index + 2, base_index + 3,
-        ]);
-        
-        base_index += 4;
-    }
-    
-    debug_stats.meshes += 1;
-    
-    Mesh::new(
-        bevy::mesh::PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    )
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
-    .with_inserted_indices(Indices::U32(indices))
 }

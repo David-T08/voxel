@@ -90,6 +90,14 @@ impl ChunkData {
         }
     }
     
+    pub fn world_to_chunk_pos(world_pos: Vec3) -> IVec3 {
+        let x = (world_pos.x / (CHUNK_SIZE as f32 * VOXEL_SIZE as f32)).floor() as i32;
+        let y = (world_pos.y / (CHUNK_SIZE as f32 * VOXEL_SIZE as f32)).floor() as i32;
+        let z = (world_pos.z / (CHUNK_SIZE as f32 * VOXEL_SIZE as f32)).floor() as i32;
+        
+        IVec3::new(x, y, z)
+    }
+    
     #[inline(always)]
     pub fn index(x: usize, y: usize, z: usize) -> usize {
         x + CHUNK_SIZE * (y + CHUNK_SIZE * z)
