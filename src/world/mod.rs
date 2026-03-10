@@ -6,7 +6,7 @@ pub const WORLD_MIN_CHUNK_Y: i32 = -4;
 pub const WORLD_MAX_CHUNK_Y: i32 = 8;
 
 pub mod generation;
-use crate::chunks::{ChunkData, ChunkPos};
+use crate::{blocks::{AIR_ID, BlockId}, chunks::{ChunkData, ChunkPos}};
 use generation::Generator;
 
 pub struct WorldPlugin;
@@ -34,6 +34,19 @@ impl WorldState {
 }
 
 impl WorldState {
+    pub fn get_block(&self, wx: i32, wy: i32, wz: i32) -> BlockId {
+        let chunk_pos = ChunkPos::from_world(wx, wy, wz);
+        let index = ChunkData::world_to_index(wx, wy, wz);
+        
+        self.get_chunk(&chunk_pos)
+            .map(|chunk| chunk.blocks[index])
+            .unwrap_or(AIR_ID)
+    }
+    
+    pub fn is_solid(&self, wx: i32, wy: i32, wz: i32) -> bool {
+        self.get_block(wx, wy, wz) == AIR_ID
+    }
+    
     pub fn insert_chunk(&mut self, pos: ChunkPos, data: ChunkData) {
         self.chunks.insert(pos, data);
     }

@@ -9,7 +9,6 @@ mod fsm;
 mod interpolation;
 mod player;
 mod registry_base;
-mod simulation;
 mod textures;
 mod world;
 

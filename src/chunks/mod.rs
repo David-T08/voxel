@@ -36,12 +36,14 @@ impl Plugin for ChunkPlugin {
                             .after(streaming::update_chunk_queues),
                         generation::tasks::collect_chunk_gen_tasks
                             .after(generation::tasks::spawn_chunk_gen_tasks),
-                        render::mesh_requested_chunks
-                            .after(generation::tasks::collect_chunk_gen_tasks)
-                            .run_if(resource_exists::<ChunkMaterial>),
-                        render::unload_chunks.after(render::mesh_requested_chunks),
+                        render::spawn_chunk_mesh_tasks
+                            .after(generation::tasks::collect_chunk_gen_tasks),
+                        render::collect_chunk_mesh_tasks
+                            .after(render::spawn_chunk_mesh_tasks),
+                        render::unload_chunks.after(render::collect_chunk_mesh_tasks),
                     )
-                        .run_if(resource_exists::<BlockRegistryReady>),
+                        .run_if(resource_exists::<BlockRegistryReady>)
+                        .run_if(resource_exists::<BlockAtlas>),
                 ),
             );
         // .add_systems(Startup, setup)
@@ -99,7 +101,7 @@ impl ChunkPos {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct ChunkData {
     pub blocks: [BlockId; CHUNK_VOLUME],
 
@@ -114,38 +116,60 @@ impl ChunkData {
         }
     }
 
-    pub fn world_to_chunk_pos(world_pos: Vec3) -> IVec3 {
-        let x = (world_pos.x / (CHUNK_SIZE as f32 * VOXEL_SIZE as f32)).floor() as i32;
-        let y = (world_pos.y / (CHUNK_SIZE as f32 * VOXEL_SIZE as f32)).floor() as i32;
-        let z = (world_pos.z / (CHUNK_SIZE as f32 * VOXEL_SIZE as f32)).floor() as i32;
-
-        IVec3::new(x, y, z)
-    }
-
     #[inline(always)]
     pub fn index(x: usize, y: usize, z: usize) -> usize {
         x + CHUNK_SIZE * (y + CHUNK_SIZE * z)
     }
-
+    
     pub fn index_to_local_pos(i: usize) -> (usize, usize, usize) {
         let x = i & CHUNK_MASK;
         let y = (i >> CHUNK_BITS) & CHUNK_MASK;
         let z = i >> (CHUNK_BITS * 2);
         (x, y, z)
     }
-
-    pub fn index_to_world_pos(i: usize, chunk_pos: &ChunkPos) -> IVec3 {
-        let (lx, ly, lz) = ChunkData::index_to_local_pos(i);
-
-        let x_offset = chunk_pos.x * CHUNK_SIZE as i32 * VOXEL_SIZE;
-        let y_offset = chunk_pos.y * CHUNK_SIZE as i32 * VOXEL_SIZE;
-        let z_offset = chunk_pos.z * CHUNK_SIZE as i32 * VOXEL_SIZE;
-
+    
+    #[inline(always)]
+    pub fn world_to_chunk_pos(wx: i32, wy: i32, wz: i32) -> IVec3 {
         IVec3::new(
-            lx as i32 * VOXEL_SIZE + x_offset,
-            ly as i32 * VOXEL_SIZE + y_offset,
-            lz as i32 * VOXEL_SIZE + z_offset,
+            wx.div_euclid(CHUNK_SIZE as i32),
+            wy.div_euclid(CHUNK_SIZE as i32),
+            wz.div_euclid(CHUNK_SIZE as i32),
         )
+    }
+    
+    #[inline(always)]
+    pub fn world_to_local_pos(wx: i32, wy: i32, wz: i32) -> (usize, usize, usize) {
+        (
+            wx.rem_euclid(CHUNK_SIZE as i32) as usize,
+            wy.rem_euclid(CHUNK_SIZE as i32) as usize,
+            wz.rem_euclid(CHUNK_SIZE as i32) as usize,
+        )
+    }
+
+    #[inline(always)]
+    pub fn world_to_index(wx: i32, wy: i32, wz: i32) -> usize {
+        let (x, y, z) = Self::world_to_local_pos(wx, wy, wz);
+        Self::index(x, y, z)
+    }
+
+    #[inline(always)]
+    pub fn local_to_world_block_pos(
+        x: usize,
+        y: usize,
+        z: usize,
+        chunk_pos: &ChunkPos,
+    ) -> IVec3 {
+        IVec3::new(
+            chunk_pos.x * CHUNK_SIZE as i32 + x as i32,
+            chunk_pos.y * CHUNK_SIZE as i32 + y as i32,
+            chunk_pos.z * CHUNK_SIZE as i32 + z as i32,
+        )
+    }
+
+    #[inline(always)]
+    pub fn index_to_world_block_pos(i: usize, chunk_pos: &ChunkPos) -> IVec3 {
+        let (x, y, z) = Self::index_to_local_pos(i);
+        Self::local_to_world_block_pos(x, y, z, chunk_pos)
     }
 
     pub fn get(&self, x: usize, y: usize, z: usize) -> BlockId {

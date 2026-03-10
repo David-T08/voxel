@@ -72,6 +72,12 @@ fn update_debug_text(
         .unwrap_or(0.0);
 
     for mut text in &mut text {
+        let (wx, wy, wz) = {
+            let floored = player.translation.floor().as_ivec3();
+            
+            (floored.x, floored.y, floored.z)
+        };
+        
         *text = Text::new(format!(
             "FPS: {:.1}\nMeshes: {}\nFaces: {}\nTriangles: {}\nVertices: {}\n\nPosition: {}\nChunk Position: {}\n\nChunk Generation Queue: {}\nChunk Unloading Queue: {}\nChunk Mesh Queue: {}",
             fps,
@@ -80,7 +86,7 @@ fn update_debug_text(
             stats.triangles,
             stats.vertices,
             player.translation.floor(),
-            ChunkData::world_to_chunk_pos(player.translation.floor()),
+            ChunkData::world_to_chunk_pos(wx, wy, wz),
             stats.chunks_to_generate,
             stats.chunks_to_unload,
             stats.chunks_to_mesh

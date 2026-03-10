@@ -43,14 +43,15 @@ pub struct BlockTexturesAsset {
 }
 
 impl BlockTexturesAsset {
-    pub fn resolve(self, reg: &BlockTextureRegistry) -> Result<BlockTextures, String> {
-        fn get_tex(reg: &BlockTextureRegistry, name: &str) -> Result<BlockTextureId, String> {
+    pub fn resolve(self, reg: &BlockTextureRegistry, atlas: &BlockAtlas) -> Result<BlockTextures, String> {
+        fn get_tex(reg: &BlockTextureRegistry, name: &str, atlas: &BlockAtlas) -> Result<[[f32; 2]; 4], String> {
             reg.name_to_id(name)
                 .ok_or_else(|| format!("unknown block texture: {name}"))
+                .map(|id| atlas.face_uvs(id).unwrap())
         }
 
         if let Some(all) = self.all {
-            return Ok(BlockTextures::from_all(get_tex(reg, &all)?));
+            return Ok(BlockTextures::from_all(get_tex(reg, &all, atlas)?));
         }
 
         if let Some(side) = self.side {
@@ -64,9 +65,9 @@ impl BlockTexturesAsset {
                 .ok_or_else(|| "missing bottom texture".to_string())?;
 
             return Ok(BlockTextures::from_top_bottom_side(
-                get_tex(reg, top)?,
-                get_tex(reg, bottom)?,
-                get_tex(reg, &side)?,
+                get_tex(reg, top, atlas)?,
+                get_tex(reg, bottom, atlas)?,
+                get_tex(reg, &side, atlas)?,
             ));
         }
 
@@ -76,36 +77,42 @@ impl BlockTexturesAsset {
                 self.top
                     .as_deref()
                     .ok_or_else(|| "missing top texture".to_string())?,
+                atlas
             )?,
             get_tex(
                 reg,
                 self.bottom
                     .as_deref()
                     .ok_or_else(|| "missing bottom texture".to_string())?,
+                atlas
             )?,
             get_tex(
                 reg,
                 self.front
                     .as_deref()
                     .ok_or_else(|| "missing front texture".to_string())?,
+                atlas
             )?,
             get_tex(
                 reg,
                 self.back
                     .as_deref()
                     .ok_or_else(|| "missing back texture".to_string())?,
+                atlas
             )?,
             get_tex(
                 reg,
                 self.left
                     .as_deref()
                     .ok_or_else(|| "missing left texture".to_string())?,
+                atlas
             )?,
             get_tex(
                 reg,
                 self.right
                     .as_deref()
                     .ok_or_else(|| "missing right texture".to_string())?,
+                atlas
             )?,
         ))
     }
@@ -113,24 +120,24 @@ impl BlockTexturesAsset {
 
 #[derive(Debug, Clone)]
 pub struct BlockTextures {
-    pub top: BlockTextureId,
-    pub bottom: BlockTextureId,
+    pub top: [[f32; 2]; 4],
+    pub bottom: [[f32; 2]; 4],
 
-    pub front: BlockTextureId,
-    pub back: BlockTextureId,
+    pub front: [[f32; 2]; 4],
+    pub back: [[f32; 2]; 4],
 
-    pub left: BlockTextureId,
-    pub right: BlockTextureId,
+    pub left: [[f32; 2]; 4],
+    pub right: [[f32; 2]; 4],
 }
 
 impl BlockTextures {
     pub fn new(
-        top: BlockTextureId,
-        bottom: BlockTextureId,
-        front: BlockTextureId,
-        back: BlockTextureId,
-        left: BlockTextureId,
-        right: BlockTextureId,
+        top: [[f32; 2]; 4],
+        bottom: [[f32; 2]; 4],
+        front: [[f32; 2]; 4],
+        back: [[f32; 2]; 4],
+        left: [[f32; 2]; 4],
+        right: [[f32; 2]; 4],
     ) -> Self {
         Self {
             top,
@@ -145,9 +152,9 @@ impl BlockTextures {
     }
 
     pub fn from_top_bottom_side(
-        top: BlockTextureId,
-        bottom: BlockTextureId,
-        side: BlockTextureId,
+        top: [[f32; 2]; 4],
+        bottom: [[f32; 2]; 4],
+        side: [[f32; 2]; 4],
     ) -> Self {
         Self {
             top,
@@ -161,7 +168,7 @@ impl BlockTextures {
         }
     }
 
-    pub fn from_all(all: BlockTextureId) -> Self {
+    pub fn from_all(all: [[f32; 2]; 4]) -> Self {
         Self {
             top: all,
             bottom: all,
@@ -174,7 +181,7 @@ impl BlockTextures {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = BlockTextureId> {
+    pub fn iter(&self) -> impl Iterator<Item = [[f32; 2]; 4]> {
         [
             self.top,
             self.bottom,
@@ -186,14 +193,14 @@ impl BlockTextures {
         .into_iter()
     }
 
-    pub fn get_uvs(&self, atlas: &BlockAtlas) -> [[[f32; 2]; 4]; 6] {
+    pub fn get_uvs(&self) -> [[[f32; 2]; 4]; 6] {
         [
-            atlas.face_uvs(self.top).unwrap(),
-            atlas.face_uvs(self.bottom).unwrap(),
-            atlas.face_uvs(self.front).unwrap(),
-            atlas.face_uvs(self.back).unwrap(),
-            atlas.face_uvs(self.left).unwrap(),
-            atlas.face_uvs(self.right).unwrap(),
+            self.top,
+            self.bottom,
+            self.front,
+            self.back,
+            self.left,
+            self.right,
         ]
     }
 }

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 pub use crate::registry_base::RegistryId;
 use crate::registry_base::{LookupRegistry, NameRegistry};
+use crate::textures::atlas::BlockAtlas;
 use crate::textures::{BlockTextureId, BlockTextureRegistry, BlockTextures, BlockTexturesAsset};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -57,12 +58,13 @@ impl BlockRegistryInner {
         name: String,
         block_textures: BlockTexturesAsset,
         tex_registry: &BlockTextureRegistry,
+        atlas: &BlockAtlas
     ) -> Option<BlockDefinition> {
         let id = self
             .names
             .register(name)
             .expect("failed to register {name} because frozen name registry");
-        let resolved = block_textures.resolve(tex_registry).unwrap();
+        let resolved = block_textures.resolve(tex_registry, atlas).unwrap();
 
         let def = BlockDefinition { textures: resolved };
 
@@ -79,7 +81,7 @@ impl BlockRegistryInner {
             .insert_with_id(
                 id,
                 BlockDefinition {
-                    textures: BlockTextures::from_all(BlockTextureId(0)),
+                    textures: BlockTextures::from_all([[0.0; 2]; 4]),
                 },
             )
             .unwrap();

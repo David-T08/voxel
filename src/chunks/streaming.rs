@@ -38,6 +38,7 @@ pub struct ChunkStreamingState {
 
     pub to_mesh: VecDeque<ChunkPos>,
     pub queued_mesh: HashSet<ChunkPos>,
+    pub meshing: HashSet<ChunkPos>,
 
     pub to_unload: VecDeque<ColumnPos>,
     pub queued_unload: HashSet<ColumnPos>,

@@ -6,7 +6,7 @@ pub mod registry;
 
 use crate::{
     blocks::registry::BlockRegistryInner,
-    textures::{BlockDefinitionAsset, BlockTextureRegistry, BlockTextureRegistryReady},
+    textures::{BlockDefinitionAsset, BlockTextureRegistry, BlockTextureRegistryReady, atlas::BlockAtlas},
 };
 pub use registry::{BlockId, BlockRegistry};
 
@@ -19,6 +19,7 @@ impl Plugin for BlockPlugin {
             Update,
             load_block_definitions
                 .run_if(resource_exists::<BlockTextureRegistryReady>)
+                .run_if(resource_exists::<BlockAtlas>)
                 .run_if(not(resource_exists::<BlockRegistryReady>)),
         );
     }
@@ -27,7 +28,7 @@ impl Plugin for BlockPlugin {
 #[derive(Resource)]
 pub struct BlockRegistryReady;
 
-fn load_block_definitions(mut commands: Commands, tex_registry: Res<BlockTextureRegistry>) {
+fn load_block_definitions(mut commands: Commands, tex_registry: Res<BlockTextureRegistry>, atlas: Res<BlockAtlas>) {
     let mut block_registry = BlockRegistryInner::default();
     block_registry.register_air();
 
@@ -50,7 +51,7 @@ fn load_block_definitions(mut commands: Commands, tex_registry: Res<BlockTexture
             .unwrap();
         let data = serde_json::from_value::<BlockDefinitionAsset>(value).unwrap();
 
-        match block_registry.register_from_asset(name.clone(), data.textures, &tex_registry) {
+        match block_registry.register_from_asset(name.clone(), data.textures, &tex_registry, &atlas) {
             Some(_) => println!(
                 "Added blocks/{stem} to block registry, registered as: {:?}",
                 block_registry.names.name_to_id(&name)
