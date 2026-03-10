@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-pub use crate::registry_base::RegistryId;
 use crate::registry_base::NameRegistry;
+pub use crate::registry_base::RegistryId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BlockTextureId(pub u16);
@@ -16,7 +16,7 @@ impl RegistryId for BlockTextureId {
     fn from_index(index: usize) -> Self {
         Self(index as u16)
     }
-    
+
     fn to_index(self) -> usize {
         self.0 as usize
     }

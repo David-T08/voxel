@@ -1,16 +1,19 @@
-use bevy::{input::mouse::AccumulatedMouseMotion, prelude::*, window::{CursorOptions, PrimaryWindow}};
+use bevy::prelude::*;
+
 use std::f32::consts::PI;
 
-mod voxel;
-mod chunks;
 mod blocks;
-mod textures;
-mod registry_base;
+mod chunks;
 mod debugging;
-mod player;
-mod simulation;
 mod fsm;
 mod interpolation;
+mod player;
+mod registry_base;
+mod simulation;
+mod textures;
+mod world;
+
+pub use world::VOXEL_SIZE;
 
 fn main() {
     App::new()
@@ -20,18 +23,17 @@ fn main() {
         .add_plugins(blocks::BlockPlugin)
         .add_plugins(debugging::DebuggingPlugin)
         .add_plugins(player::PlayerPlugin)
+        .add_plugins(world::WorldPlugin)
         .add_systems(Startup, setup)
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-) {
+fn setup(mut commands: Commands) {
     commands.spawn((
         DirectionalLight::default(),
         Transform {
-            rotation: Quat::from_euler(EulerRot::XYZ, -PI/13.0, PI/6., 0.),
+            rotation: Quat::from_euler(EulerRot::XYZ, -PI / 13.0, PI / 6., 0.),
             ..Default::default()
-        }
+        },
     ));
 }

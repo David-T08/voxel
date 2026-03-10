@@ -1,1 +1,0 @@
-pub const VOXEL_SIZE: i32 = 1;

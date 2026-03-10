@@ -1,6 +1,6 @@
-use bevy::prelude::*;
-use crate::fsm::{StateLifecycle, StateMachine, StateUpdate, Transition};
 use super::{Player, input::PlayerInput};
+use crate::fsm::{StateLifecycle, StateMachine, StateUpdate, Transition};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct PlayerController {
@@ -9,41 +9,41 @@ pub struct PlayerController {
     pub run_speed: f32,
     pub gravity: f32,
     pub grounded: bool,
-    
+
     pub jump_force: f32,
     pub jump_requested: bool,
     pub holding_jump: bool,
-    
+
     pub crouching: bool,
     pub sprinting: bool,
-    
+
     // debug
     pub flying: bool,
-    
+
     pub target_horiz_velocity: Vec2,
-    pub current_velocity: Vec3
+    pub current_velocity: Vec3,
 }
 
 pub fn tick(
     mut controller: Single<&mut PlayerController, With<Player>>,
     mut input: Single<&mut PlayerInput, With<Player>>,
-    time: Res<Time<Fixed>>
+    time: Res<Time<Fixed>>,
 ) {
     let input = &mut input.movement;
-    
+
     let ctx = MoveContext {
         input_direction: input.direction,
-        speed: controller.walk_speed
+        speed: controller.walk_speed,
     };
-    
+
     let cmds = controller.fsm.tick(time.delta_secs(), &ctx);
     for cmd in cmds {
         apply_cmd(&mut controller, cmd);
     }
-    
+
     controller.flying = input.set_fly;
     controller.holding_jump = input.jump_held;
-    
+
     controller.crouching = input.crouch;
 
     if input.jump_pressed && controller.grounded {
@@ -52,14 +52,9 @@ pub fn tick(
     }
 }
 
-fn apply_cmd(
-    controller: &mut PlayerController,
-    cmd: MoveCmd
-) {
+fn apply_cmd(controller: &mut PlayerController, cmd: MoveCmd) {
     match cmd {
-        MoveCmd::SetVelocityTarget(vec) => {
-            controller.target_horiz_velocity = vec
-        }
+        MoveCmd::SetVelocityTarget(vec) => controller.target_horiz_velocity = vec,
     }
 }
 
@@ -105,7 +100,7 @@ impl StateUpdate<MoveContext, MoveCmd> for MoveState {
                 Transition::Stay
             }
 
-            MoveState::Walking | MoveState::Run  => {
+            MoveState::Walking | MoveState::Run => {
                 if is_still(&ctx.input_direction) {
                     return Transition::Switch(MoveState::Idle);
                 }

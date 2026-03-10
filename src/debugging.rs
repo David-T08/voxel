@@ -1,14 +1,29 @@
-use bevy::{diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin}, prelude::*};
+use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
+use bevy::{
+    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
+    prelude::*,
+};
 
 use crate::{chunks::ChunkData, player::Player};
 
 pub struct DebuggingPlugin;
 impl Plugin for DebuggingPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(DebugRenderStats::default());
-        app.add_plugins(FrameTimeDiagnosticsPlugin::default());
-        app.add_systems(Startup, setup);
-        app.add_systems(Update, update_debug_text);
+        app.add_plugins(FrameTimeDiagnosticsPlugin::default())
+            .add_plugins(WireframePlugin::default())
+            .add_systems(Startup, setup)
+            .add_systems(Update, (update_debug_text, toggle_wireframe))
+            .insert_resource(WireframeConfig {
+                global: true,
+                ..default()
+            })
+            .insert_resource(DebugRenderStats::default());
+    }
+}
+
+fn toggle_wireframe(keys: Res<ButtonInput<KeyCode>>, mut config: ResMut<WireframeConfig>) {
+    if keys.just_pressed(KeyCode::F3) {
+        config.global = !config.global;
     }
 }
 
@@ -39,13 +54,17 @@ pub struct DebugRenderStats {
     pub faces: u64,
     pub triangles: u64,
     pub vertices: u64,
+
+    pub chunks_to_generate: u64,
+    pub chunks_to_unload: u64,
+    pub chunks_to_mesh: u64,
 }
 
 fn update_debug_text(
     diagnostics: Res<DiagnosticsStore>,
     stats: Res<DebugRenderStats>,
     mut text: Query<&mut Text, With<DebugText>>,
-    player: Single<&Transform, With<Player>>
+    player: Single<&Transform, With<Player>>,
 ) {
     let fps = diagnostics
         .get(&FrameTimeDiagnosticsPlugin::FPS)
@@ -54,14 +73,17 @@ fn update_debug_text(
 
     for mut text in &mut text {
         *text = Text::new(format!(
-            "FPS: {:.1}\nMeshes: {}\nFaces: {}\nTriangles: {}\nVertices: {}\n\nPosition: {}\nChunk Position: {}",
+            "FPS: {:.1}\nMeshes: {}\nFaces: {}\nTriangles: {}\nVertices: {}\n\nPosition: {}\nChunk Position: {}\n\nChunk Generation Queue: {}\nChunk Unloading Queue: {}\nChunk Mesh Queue: {}",
             fps,
             stats.meshes,
             stats.faces,
             stats.triangles,
             stats.vertices,
             player.translation.floor(),
-            ChunkData::world_to_chunk_pos(player.translation.floor())
+            ChunkData::world_to_chunk_pos(player.translation.floor()),
+            stats.chunks_to_generate,
+            stats.chunks_to_unload,
+            stats.chunks_to_mesh
         ));
     }
 }
