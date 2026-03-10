@@ -13,7 +13,7 @@ impl Default for PlayerCamera {
     fn default() -> Self {
         Self {
             pitch: 0.0,
-            offset: Vec3::new(0., 1.6, 0.),
+            offset: Vec3::new(0., 1.05, 0.),
         }
     }
 }

@@ -44,7 +44,7 @@ impl WorldState {
     }
     
     pub fn is_solid(&self, wx: i32, wy: i32, wz: i32) -> bool {
-        self.get_block(wx, wy, wz) == AIR_ID
+        self.get_block(wx, wy, wz) != AIR_ID
     }
     
     pub fn insert_chunk(&mut self, pos: ChunkPos, data: ChunkData) {

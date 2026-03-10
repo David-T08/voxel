@@ -58,6 +58,8 @@ pub struct DebugRenderStats {
     pub chunks_to_generate: u64,
     pub chunks_to_unload: u64,
     pub chunks_to_mesh: u64,
+    
+    pub raycast_voxel_hit: IVec3,
 }
 
 fn update_debug_text(
@@ -79,7 +81,7 @@ fn update_debug_text(
         };
         
         *text = Text::new(format!(
-            "FPS: {:.1}\nMeshes: {}\nFaces: {}\nTriangles: {}\nVertices: {}\n\nPosition: {}\nChunk Position: {}\n\nChunk Generation Queue: {}\nChunk Unloading Queue: {}\nChunk Mesh Queue: {}",
+            "FPS: {:.1}\nMeshes: {}\nFaces: {}\nTriangles: {}\nVertices: {}\n\nPosition: {}\nChunk Position: {}\n\nChunk Generation Queue: {}\nChunk Unloading Queue: {}\nChunk Mesh Queue: {}\n\nRaycast Voxel: {}",
             fps,
             stats.meshes,
             stats.faces,
@@ -89,7 +91,8 @@ fn update_debug_text(
             ChunkData::world_to_chunk_pos(wx, wy, wz),
             stats.chunks_to_generate,
             stats.chunks_to_unload,
-            stats.chunks_to_mesh
+            stats.chunks_to_mesh,
+            stats.raycast_voxel_hit
         ));
     }
 }

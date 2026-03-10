@@ -1,16 +1,11 @@
 use super::{Player, input::PlayerInput};
-use crate::fsm::{StateLifecycle, StateMachine, StateUpdate, Transition};
+use crate::{fsm::{StateLifecycle, StateMachine, StateUpdate, Transition}, simulation::body_3D::CharacterBody3D};
 use bevy::prelude::*;
+use crate::interpolation::exp_smooth;
 
 #[derive(Component)]
 pub struct PlayerController {
     pub fsm: StateMachine<MoveState>,
-    pub walk_speed: f32,
-    pub run_speed: f32,
-    pub gravity: f32,
-    pub grounded: bool,
-
-    pub jump_force: f32,
     pub jump_requested: bool,
     pub holding_jump: bool,
 
@@ -21,19 +16,76 @@ pub struct PlayerController {
     pub flying: bool,
 
     pub target_horiz_velocity: Vec2,
-    pub current_velocity: Vec3,
+}
+
+pub fn drive_character_body(
+    player: Single<
+        (&Transform, &mut PlayerController, &mut CharacterBody3D),
+        With<Player>,
+    >,
+    time: Res<Time<Fixed>>,
+) {
+    let dt = time.delta_secs();
+
+    let (transform, mut controller, mut body) = player.into_inner();
+
+    let local = controller.target_horiz_velocity;
+
+    let mut forward = *transform.forward();
+    forward.y = 0.0;
+    forward = forward.normalize_or_zero();
+
+    let mut right = *transform.right();
+    right.y = 0.0;
+    right = right.normalize_or_zero();
+
+    let move_speed = if controller.sprinting {
+        body.config.run_speed
+    } else {
+        body.config.walk_speed
+    };
+    
+    let desired_world = (right * local.x + forward * local.y) * move_speed;
+    
+    body.current_velocity.x =
+        exp_smooth(body.current_velocity.x, desired_world.x, 20.0, dt);
+
+    body.current_velocity.z =
+        exp_smooth(body.current_velocity.z, desired_world.z, 20.0, dt);
+
+    body.noclip = controller.flying;
+    body.affected_by_gravity = !controller.flying;
+    
+    if controller.flying {
+         body.current_velocity.y =
+             (controller.holding_jump as i8 as f32 - controller.crouching as i8 as f32) * 6.5;
+         body.grounded = false;
+     } else if controller.jump_requested && body.grounded {
+         body.current_velocity.y = body.config.jump_force;
+         controller.jump_requested = false;
+     } else {
+         controller.jump_requested = false;
+     }
 }
 
 pub fn tick(
-    mut controller: Single<&mut PlayerController, With<Player>>,
-    mut input: Single<&mut PlayerInput, With<Player>>,
+    player: Single<
+        (&mut PlayerController, &mut PlayerInput, &CharacterBody3D),
+        With<Player>,
+    >,
     time: Res<Time<Fixed>>,
 ) {
+    let (mut controller, mut input, body) = player.into_inner();
     let input = &mut input.movement;
+
+    controller.flying = input.set_fly;
+    controller.holding_jump = input.jump_held;
+    controller.crouching = input.crouch;
+    controller.sprinting = input.sprint;
 
     let ctx = MoveContext {
         input_direction: input.direction,
-        speed: controller.walk_speed,
+        sprinting: controller.sprinting,
     };
 
     let cmds = controller.fsm.tick(time.delta_secs(), &ctx);
@@ -41,12 +93,7 @@ pub fn tick(
         apply_cmd(&mut controller, cmd);
     }
 
-    controller.flying = input.set_fly;
-    controller.holding_jump = input.jump_held;
-
-    controller.crouching = input.crouch;
-
-    if input.jump_pressed && controller.grounded {
+    if input.jump_pressed && body.grounded {
         controller.jump_requested = true;
         input.jump_pressed = false;
     }
@@ -70,7 +117,7 @@ impl StateLifecycle<MoveContext, MoveCmd> for MoveState {}
 #[derive(Debug, Clone, Copy)]
 pub struct MoveContext {
     pub input_direction: Vec2,
-    pub speed: f32,
+    pub sprinting: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -86,26 +133,47 @@ pub fn is_still(v: &Vec2) -> bool {
 impl StateUpdate<MoveContext, MoveCmd> for MoveState {
     fn update(
         &mut self,
-        delta: f32,
+        _delta: f32,
         ctx: &MoveContext,
         out: &mut Vec<MoveCmd>,
     ) -> Transition<Self> {
         match self {
             MoveState::Idle => {
                 if !is_still(&ctx.input_direction) {
-                    return Transition::Switch(MoveState::Run);
+                    if ctx.sprinting {
+                        return Transition::Switch(MoveState::Run);
+                    } else {
+                        return Transition::Switch(MoveState::Walking);
+                    }
                 }
 
                 out.push(MoveCmd::SetVelocityTarget(Vec2::ZERO));
                 Transition::Stay
             }
 
-            MoveState::Walking | MoveState::Run => {
+            MoveState::Walking => {
                 if is_still(&ctx.input_direction) {
                     return Transition::Switch(MoveState::Idle);
                 }
 
-                out.push(MoveCmd::SetVelocityTarget(ctx.input_direction * ctx.speed));
+                if ctx.sprinting {
+                    return Transition::Switch(MoveState::Run);
+                }
+
+                out.push(MoveCmd::SetVelocityTarget(ctx.input_direction.normalize_or_zero()));
+                Transition::Stay
+            }
+
+            MoveState::Run => {
+                if is_still(&ctx.input_direction) {
+                    return Transition::Switch(MoveState::Idle);
+                }
+
+                if !ctx.sprinting {
+                    return Transition::Switch(MoveState::Walking);
+                }
+
+                out.push(MoveCmd::SetVelocityTarget(ctx.input_direction.normalize_or_zero()));
                 Transition::Stay
             }
         }

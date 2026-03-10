@@ -1,45 +1,62 @@
 use bevy::{prelude::*, window::CursorOptions};
 
 use crate::{chunks::streaming::ChunkViewer, fsm::StateMachine, player::camera::PlayerCamera};
+use crate::simulation::body_3D::{BoxCollider3D, CharacterBody3D};
 
 pub mod camera;
 pub mod controller;
+pub mod interaction;
 pub mod input;
-pub mod movement;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (lock_cursor, spawn_player))
-            .add_systems(FixedUpdate, (controller::tick, movement::step).chain())
-            .add_systems(Update, (input::capture, camera::update));
+        app
+            .init_resource::<interaction::selection::CurrentBlockTarget>()
+            .add_systems(
+                Startup, 
+                (
+                    lock_cursor, 
+                    spawn_player,
+                    interaction::selection::setup_selection_box
+                ))
+            .add_systems(FixedUpdate, (controller::tick, controller::drive_character_body).chain())
+            .add_systems(
+                Update, 
+                (
+                    input::capture, 
+                    camera::update, 
+                    interaction::selection::update_block_target,
+                    interaction::selection::update_selection_box
+                ).chain());
     }
 }
 
 fn spawn_player(mut commands: Commands) {
     commands.spawn((
         Player,
-        Transform::default(),
+        Transform {
+            translation: Vec3::new(0., 40., 0.),
+            ..Default::default()
+        },
         GlobalTransform::default(),
         input::PlayerInput::default(),
+        CharacterBody3D::default(),
+        BoxCollider3D::new(Vec3::new(
+            0.55, 1.35, 0.55
+        )),
+        
         controller::PlayerController {
             fsm: StateMachine::new(controller::MoveState::Idle),
-            walk_speed: 36.0,
-            run_speed: 12.0,
-            gravity: 20.0,
-
-            grounded: false,
             flying: false,
 
             crouching: false,
             sprinting: false,
 
-            jump_force: 6.5,
             jump_requested: false,
             holding_jump: false,
 
             target_horiz_velocity: Vec2::ZERO,
-            current_velocity: Vec3::ZERO,
         },
     ));
 
@@ -47,9 +64,13 @@ fn spawn_player(mut commands: Commands) {
         Camera3d::default(),
         Transform::default(),
         GlobalTransform::default(),
+        Projection::Perspective(PerspectiveProjection {
+            fov: 80.0_f32.to_radians(),
+            ..default()
+        }),
         PlayerCamera::default(),
         ChunkViewer {
-            horizontal_radius: 32,
+            horizontal_radius: 8,
         },
     ));
 }
