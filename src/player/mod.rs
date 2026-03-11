@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::CursorOptions};
 
+use crate::blocks::BlockRegistry;
 use crate::{chunks::streaming::ChunkViewer, fsm::StateMachine, player::camera::PlayerCamera};
 use crate::simulation::body_3D::{BoxCollider3D, CharacterBody3D};
 
@@ -27,7 +28,9 @@ impl Plugin for PlayerPlugin {
                     input::capture, 
                     camera::update, 
                     interaction::selection::update_block_target,
-                    interaction::selection::update_selection_box
+                    interaction::selection::update_selection_box,
+                    interaction::placement::tick.run_if(resource_exists::<BlockRegistry>),
+                    interaction::mining::tick
                 ).chain());
     }
 }
@@ -36,7 +39,7 @@ fn spawn_player(mut commands: Commands) {
     commands.spawn((
         Player,
         Transform {
-            translation: Vec3::new(0., 40., 0.),
+            translation: Vec3::new(0., 100., 0.),
             ..Default::default()
         },
         GlobalTransform::default(),
@@ -70,7 +73,7 @@ fn spawn_player(mut commands: Commands) {
         }),
         PlayerCamera::default(),
         ChunkViewer {
-            horizontal_radius: 8,
+            horizontal_radius: 64,
         },
     ));
 }

@@ -157,3 +157,13 @@ pub fn update_chunk_queues(
     stats.chunks_to_unload = streaming.to_unload.len() as u64;
     stats.chunks_to_mesh = streaming.to_mesh.len() as u64;
 }
+
+pub fn mark_dirty_chunk(
+    streaming: &mut ChunkStreamingState,
+    
+    chunk: ChunkPos
+) {
+    if streaming.queued_mesh.insert(chunk) {
+        streaming.to_mesh.push_front(chunk);
+    }
+}

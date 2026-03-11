@@ -5,7 +5,7 @@ use bevy::tasks::{AsyncComputeTaskPool, Task};
 use crate::blocks::BlockRegistry;
 use crate::chunks::streaming::{ChunkStreamingState, ColumnPos};
 use crate::chunks::{ChunkData, ChunkPos};
-use crate::world::generation::{Generator, generate_chunk};
+use crate::world::generation::{TerrainNoise, generate_chunk};
 use crate::world::{WORLD_MAX_CHUNK_Y, WORLD_MIN_CHUNK_Y, WorldState};
 
 #[derive(Component)]
@@ -15,7 +15,7 @@ const MAX_GEN_TASKS_PER_FRAME: usize = 8;
 const MAX_ACTIVE_GEN_TASKS: usize = 32;
 
 pub fn generate_column(
-    generator: &Generator,
+    generator: &TerrainNoise,
     column: ColumnPos,
     registry: &BlockRegistry,
 ) -> Vec<(ChunkPos, ChunkData)> {
@@ -61,9 +61,9 @@ pub fn spawn_chunk_gen_tasks(
         let registry = block_reg.clone();
         let task_pos = column;
 
+        let cloned = world.generator.clone();
         let task = pool.spawn(async move {
-            let generator = Generator::new(seed);
-            let chunk = generate_column(&generator, column, &registry);
+            let chunk = generate_column(&cloned, column, &registry);
             (task_pos, chunk)
         });
 

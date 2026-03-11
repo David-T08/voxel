@@ -13,7 +13,7 @@ pub struct CharacterBody3DConfig {
 impl Default for CharacterBody3DConfig {
     fn default() -> Self {
         Self {
-            walk_speed: 6.0,
+            walk_speed: 24.0,
             run_speed: 18.0,
             gravity: 25.0,
             jump_force: 8.0,
