@@ -51,7 +51,7 @@ fn load_block_definitions(mut commands: Commands, tex_registry: Res<BlockTexture
             .unwrap();
         let data = serde_json::from_value::<BlockDefinitionAsset>(value).unwrap();
 
-        match block_registry.register_from_asset(name.clone(), data.textures, &tex_registry, &atlas) {
+        match block_registry.register_from_asset(name.clone(), data.textures, true, &tex_registry, &atlas) {
             Some(_) => println!(
                 "Added blocks/{stem} to block registry, registered as: {:?}",
                 block_registry.names.name_to_id(&name)
@@ -61,6 +61,8 @@ fn load_block_definitions(mut commands: Commands, tex_registry: Res<BlockTexture
     }
 
     block_registry.freeze();
+    
+    dbg!(block_registry.get_block(block_registry.names.name_to_id("core:stone").unwrap()).unwrap().emission);
     commands.insert_resource(BlockRegistry(Arc::new(block_registry)));
     commands.insert_resource(BlockRegistryReady);
 }

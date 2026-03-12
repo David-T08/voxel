@@ -24,7 +24,9 @@ pub struct MouseInput {
     pub m2_pressed: bool,
     
     pub m3_held: bool,
-    pub m3_pressed: bool
+    pub m3_pressed: bool,
+    
+    pub cursor_unlocked: bool,
 }
 
 #[derive(Component, Default)]
@@ -41,6 +43,10 @@ pub fn capture(
 ) {
     capture_movement(&keyboard, &mut input.movement, &time);
     capture_mouse_clicks(&mouse, &mut input.mouse);
+    
+    if keyboard.just_pressed(KeyCode::Escape) {
+        input.mouse.cursor_unlocked = !input.mouse.cursor_unlocked;
+    }
 }
 
 fn capture_mouse_clicks(mouse: &ButtonInput<MouseButton>, input: &mut MouseInput) {

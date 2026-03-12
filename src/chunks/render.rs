@@ -1,21 +1,14 @@
 use std::collections::HashMap;
+use bevy::{asset::RenderAssetUsages, mesh::Indices, prelude::*, tasks::{AsyncComputeTaskPool, Task, futures_lite::future}};
 
 use super::{ChunkData, ChunkPos};
 use crate::{
-    VOXEL_SIZE,
-    blocks::{AIR_ID, BlockRegistry},
-    chunks::{
-        CHUNK_SIZE,
-        streaming::{ChunkStreamingState, ColumnPos},
-    },
-    debugging::DebugRenderStats,
-    textures::Face,
-    world::{WORLD_MAX_CHUNK_Y, WORLD_MIN_CHUNK_Y, WorldState},
+    VOXEL_SIZE, blocks::{AIR_ID, BlockRegistry}, chunks::{CHUNK_SIZE, CHUNK_VOLUME, streaming::{ChunkStreamingState, ColumnPos}}, debugging::DebugRenderStats, lighting, textures::Face, world::{WORLD_MAX_CHUNK_Y, WORLD_MIN_CHUNK_Y, WorldState}
 };
-use bevy::{asset::RenderAssetUsages, mesh::Indices, prelude::*, tasks::{AsyncComputeTaskPool, Task, futures_lite::future}};
 
-const MAX_MESH_TASKS_PER_FRAME: usize = 64;
-const MAX_ACTIVE_MESH_TASKS: usize = 32;
+
+const MAX_MESH_TASKS_PER_FRAME: usize = 8;
+const MAX_ACTIVE_MESH_TASKS: usize = 16;
 
 #[derive(Resource, Default)]
 pub struct ChunkRenderMap {
@@ -34,6 +27,7 @@ pub struct RawChunkMesh {
     pub vertices: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,
+    pub colors: Vec<[f32; 4]>,
     pub indices: Vec<u32>,
     pub vert_count: u64,
 }
@@ -56,6 +50,7 @@ struct ChunkMeshBuilder {
 
     pub vertices: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
+    pub colors: Vec<[f32; 4]>,
     pub uvs: Vec<[f32; 2]>,
     pub indices: Vec<u32>,
 }
@@ -66,7 +61,7 @@ impl ChunkMeshBuilder {
     }
     
     #[rustfmt::skip]
-    pub fn add_face(&mut self, f: Face, x: usize, y: usize, z: usize) {
+    pub fn add_face(&mut self, f: Face, x: usize, y: usize, z: usize, color: [f32; 4]) {
         let f = f as usize;
         
         const POSITIONS: [[[f32; 3]; 4]; 6] = [
@@ -136,6 +131,7 @@ impl ChunkMeshBuilder {
                 p[2] + z as f32 + 0.5,
             ]);
 
+            self.colors.push(color);
             self.normals.push(NORMALS[f]);
         }
         
@@ -154,6 +150,7 @@ impl ChunkMeshBuilder {
             vertices: self.vertices,
             normals: self.normals,
             uvs: self.uvs,
+            colors: self.colors,
             indices: self.indices,
             vert_count,
         }
@@ -182,25 +179,37 @@ fn is_air_world(world: &WorldState, chunk_pos: &ChunkPos, x: isize, y: isize, z:
 }
 
 #[inline(always)]
-fn is_air_snapshot(
+fn get_neighbor_and_local_coords(pos: ChunkPos, x: isize, y: isize, z: isize) -> (
+    ChunkPos,
+    usize,
+    usize,
+    usize
+) {
+    let cs = CHUNK_SIZE as isize;
+    
+    let lx = x.rem_euclid(cs) as usize;
+    let ly = y.rem_euclid(cs) as usize;
+    let lz = z.rem_euclid(cs) as usize;
+    
+    let neighbor = ChunkPos::new(
+        pos.x + x.div_euclid(cs) as i32,
+        pos.y + y.div_euclid(cs) as i32,
+        pos.z + z.div_euclid(cs) as i32,
+    );
+    
+    (neighbor, lx, ly, lz)
+}
+
+#[inline(always)]
+fn snapshot(
     input: &MeshChunkInput,
     x: isize,
     y: isize,
-    z: isize,
-) -> bool {
-    let cs = CHUNK_SIZE as isize;
+    z: isize
+) -> Option<&ChunkData> {
+    let neighbor_chunk = get_neighbor_and_local_coords(input.pos, x, y, z).0;
 
-    let neighbor_chunk = ChunkPos::new(
-        input.pos.x + x.div_euclid(cs) as i32,
-        input.pos.y + y.div_euclid(cs) as i32,
-        input.pos.z + z.div_euclid(cs) as i32,
-    );
-
-    let local_x = x.rem_euclid(cs) as usize;
-    let local_y = y.rem_euclid(cs) as usize;
-    let local_z = z.rem_euclid(cs) as usize;
-
-    let chunk = if neighbor_chunk == input.pos {
+    if neighbor_chunk == input.pos {
         Some(&input.chunk)
     } else if neighbor_chunk == ChunkPos::new(input.pos.x, input.pos.y + 1, input.pos.z) {
         input.top.as_ref()
@@ -216,13 +225,39 @@ fn is_air_snapshot(
         input.back.as_ref()
     } else {
         None
-    };
+    }
+}
 
-    let Some(chunk) = chunk else {
+#[inline(always)]
+fn is_air_snapshot(
+    input: &MeshChunkInput,
+    x: isize,
+    y: isize,
+    z: isize,
+) -> bool {
+    let (_, local_x, local_y, local_z) = get_neighbor_and_local_coords(input.pos, x, y, z);
+
+    let Some(chunk) = snapshot(input, x, y, z) else {
         return true;
     };
 
     chunk.blocks[ChunkData::index(local_x, local_y, local_z)] == AIR_ID
+}
+
+#[inline(always)]
+fn light_snapshot(
+    input: &MeshChunkInput,
+    x: isize,
+    y: isize,
+    z: isize,
+) -> u8 {
+    let (_, local_x, local_y, local_z) = get_neighbor_and_local_coords(input.pos, x, y, z);
+
+    let Some(chunk) = snapshot(input, x, y, z) else {
+        return 0;
+    };
+
+    chunk.light[ChunkData::index(local_x, local_y, local_z)]
 }
 
 pub fn spawn_chunk_mesh_tasks(
@@ -300,13 +335,30 @@ fn build_chunk_mesh_async(
                 builder.set_uv_lookup(block_data.textures.get_uvs());
 
                 let (ix, iy, iz) = (x as isize, y as isize, z as isize);
-
-                if is_air_snapshot(&input, ix, iy + 1, iz) { builder.add_face(Face::Top, x, y, z); }
-                if is_air_snapshot(&input, ix, iy - 1, iz) { builder.add_face(Face::Bottom, x, y, z); }
-                if is_air_snapshot(&input, ix, iy, iz + 1) { builder.add_face(Face::Front, x, y, z); }
-                if is_air_snapshot(&input, ix, iy, iz - 1) { builder.add_face(Face::Back, x, y, z); }
-                if is_air_snapshot(&input, ix - 1, iy, iz) { builder.add_face(Face::Left, x, y, z); }
-                if is_air_snapshot(&input, ix + 1, iy, iz) { builder.add_face(Face::Right, x, y, z); }
+                if is_air_snapshot(&input, ix, iy + 1, iz) { 
+                    let light = light_snapshot(&input, ix, iy + 1, iz);
+                    builder.add_face(Face::Top, x, y, z, lighting::light_to_color(light));
+                }
+                if is_air_snapshot(&input, ix, iy - 1, iz) { 
+                    let light = light_snapshot(&input, ix, iy - 1, iz);
+                    builder.add_face(Face::Bottom, x, y, z, lighting::light_to_color(light));
+                }
+                if is_air_snapshot(&input, ix, iy, iz + 1) { 
+                    let light = light_snapshot(&input, ix, iy, iz + 1);
+                    builder.add_face(Face::Front, x, y, z, lighting::light_to_color(light));
+                }
+                if is_air_snapshot(&input, ix, iy, iz - 1) { 
+                    let light = light_snapshot(&input, ix, iy, iz - 1);
+                    builder.add_face(Face::Back, x, y, z, lighting::light_to_color(light));
+                }
+                if is_air_snapshot(&input, ix - 1, iy, iz) { 
+                    let light = light_snapshot(&input, ix - 1, iy, iz);
+                    builder.add_face(Face::Left, x, y, z, lighting::light_to_color(light));
+                }
+                if is_air_snapshot(&input, ix + 1, iy, iz) { 
+                    let light = light_snapshot(&input, ix + 1, iy, iz);
+                    builder.add_face(Face::Right, x, y, z, lighting::light_to_color(light));
+                }
             }
         }
     }
@@ -338,9 +390,11 @@ pub fn collect_chunk_mesh_tasks(
                 bevy::mesh::PrimitiveTopology::TriangleList,
                 RenderAssetUsages::default(),
             )
+            
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, raw.vertices)
             .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, raw.normals)
             .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, raw.uvs)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, raw.colors)
             .with_inserted_indices(Indices::U32(raw.indices));
 
             let mesh_handle = meshes.add(mesh);
@@ -381,110 +435,6 @@ pub fn collect_chunk_mesh_tasks(
         }
     }
 }
-
-// pub fn mesh_requested_chunks(
-//     mut commands: Commands,
-//     mut meshes: ResMut<Assets<Mesh>>,
-//     mut render_map: ResMut<ChunkRenderMap>,
-//     mut debug_stats: ResMut<DebugRenderStats>,
-//     mut streaming: ResMut<ChunkStreamingState>,
-
-//     mut world: ResMut<WorldState>,
-//     atlas: Res<BlockAtlas>,
-//     block_reg: Res<BlockRegistry>,
-//     chunk_material: Res<ChunkMaterial>,
-// ) {
-//     for _ in 0..MAX_MESHES_PER_FRAME {
-//         let Some(pos) = streaming.to_mesh.pop_front() else {
-//             break;
-//         };
-
-//         streaming.queued_mesh.remove(&pos);
-//         let column = ColumnPos::new(pos.x, pos.z);
-//         if !streaming.active.contains(&column) || !streaming.desired.contains(&column) {
-//             continue;
-//         }
-
-//         let Some(chunk) = world.get_chunk(&pos) else {
-//             continue;
-//         };
-
-//         let mut builder = ChunkMeshBuilder::default();
-
-//         for x in 0..CHUNK_SIZE {
-//             for y in 0..CHUNK_SIZE {
-//                 for z in 0..CHUNK_SIZE {
-//                     let i = ChunkData::index(x as usize, y as usize, z as usize);
-//                     let block = chunk.blocks[i];
-
-//                     if block == AIR_ID {
-//                         continue;
-//                     }
-
-//                     let block_data = block_reg
-//                         .definitions
-//                         .get(block)
-//                         .expect("Expected block {block} to exist!");
-//                     let uvs = block_data.textures.get_uvs(&atlas);
-
-//                     builder.set_uv_lookup(uvs);
-
-//                     let (ix, iy, iz) = (x as isize, y as isize, z as isize);
-
-//                     if is_air_world(&world, &pos, ix, iy + 1, iz) {
-//                         builder.add_face(Face::Top, x, y, z);
-//                     }
-//                     if is_air_world(&world, &pos, ix, iy - 1, iz) {
-//                         builder.add_face(Face::Bottom, x, y, z);
-//                     }
-//                     if is_air_world(&world, &pos, ix, iy, iz + 1) {
-//                         builder.add_face(Face::Front, x, y, z);
-//                     }
-//                     if is_air_world(&world, &pos, ix, iy, iz - 1) {
-//                         builder.add_face(Face::Back, x, y, z);
-//                     }
-//                     if is_air_world(&world, &pos, ix - 1, iy, iz) {
-//                         builder.add_face(Face::Left, x, y, z);
-//                     }
-//                     if is_air_world(&world, &pos, ix + 1, iy, iz) {
-//                         builder.add_face(Face::Right, x, y, z);
-//                     }
-//                 }
-//             }
-//         }
-
-//         let vert_count = builder.vertices.len();
-//         let faces = vert_count / 4;
-//         let triangles = vert_count / 2;
-
-//         debug_stats.faces += faces as u64;
-//         debug_stats.vertices += vert_count as u64;
-//         debug_stats.triangles += triangles as u64;
-//         debug_stats.meshes += 1;
-
-//         world.get_chunk_mut(&pos).unwrap().vertice_count = vert_count as u64;
-
-//         let mesh_handle = meshes.add(builder.build());
-
-//         if let Some(&entity) = render_map.entities.get(&pos) {
-//             commands.entity(entity).insert(Mesh3d(mesh_handle));
-//         } else {
-//             let entity = commands
-//                 .spawn((
-//                     Mesh3d(mesh_handle),
-//                     MeshMaterial3d(chunk_material.clone()),
-//                     Transform {
-//                         translation: pos.as_vec3() * CHUNK_SIZE as f32,
-//                         scale: Vec3::splat(VOXEL_SIZE as f32),
-//                         ..Default::default()
-//                     },
-//                 ))
-//                 .id();
-
-//             render_map.entities.insert(pos, entity);
-//         }
-//     }
-// }
 
 pub fn unload_chunks(
     mut commands: Commands,

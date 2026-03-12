@@ -104,7 +104,7 @@ impl TerrainNoise {
         continent.set_frequency(Some(0.001));
         continent.set_fractal_type(Some(FractalType::FBm));
         continent.set_fractal_octaves(Some(4));
-        continent.set_fractal_lacunarity(Some(2.0));
+        continent.set_fractal_lacunarity(Some(1.0));
         continent.set_fractal_gain(Some(0.25));
         
         let mut hills = FastNoiseLite::with_seed(seed + 1);
@@ -117,15 +117,15 @@ impl TerrainNoise {
         
         let mut mountains = FastNoiseLite::with_seed(seed - 12);
         mountains.set_noise_type(Some(NoiseType::OpenSimplex2));
-        mountains.set_frequency(Some(0.0001));
+        mountains.set_frequency(Some(0.001));
         mountains.set_fractal_type(Some(FractalType::Ridged));
         mountains.set_fractal_octaves(Some(2));
-        mountains.set_fractal_lacunarity(Some(0.88));
+        mountains.set_fractal_lacunarity(Some(1.2));
         mountains.set_fractal_gain(Some(0.310));
         
         let mut detail = FastNoiseLite::with_seed(seed + 63);
         detail.set_noise_type(Some(NoiseType::OpenSimplex2));
-        detail.set_frequency(Some(0.07));
+        detail.set_frequency(Some(0.02));
         detail.set_fractal_type(Some(FractalType::FBm));
         detail.set_fractal_octaves(Some(3));
         detail.set_fractal_lacunarity(Some(1.6));
@@ -154,7 +154,7 @@ impl TerrainNoise {
             detail,
             
             temperature,
-            humidity
+            humidity,
             
             seed
         }
@@ -184,7 +184,7 @@ fn sample_height(noise: &TerrainNoise, x: f32, z: f32) -> i32 {
     let mut height = 62.0;
     height += continent * 35.0;
     height += hills * 16.0 * hill_mask;
-    height += mountains * 90.0 * mountain_mask;
+    height += mountains * 75.0 * mountain_mask;
     height += detail * 1.5;
 
     height as i32

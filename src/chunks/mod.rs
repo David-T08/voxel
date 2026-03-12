@@ -9,6 +9,7 @@ pub const CHUNK_VOLUME: usize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_BITS: usize = CHUNK_SIZE.trailing_zeros() as usize;
 const CHUNK_MASK: usize = CHUNK_SIZE - 1;
 
+use crate::lighting;
 use crate::world::generation;
 use crate::{
     VOXEL_SIZE,
@@ -36,8 +37,12 @@ impl Plugin for ChunkPlugin {
                             .after(streaming::update_chunk_queues),
                         generation::tasks::collect_chunk_gen_tasks
                             .after(generation::tasks::spawn_chunk_gen_tasks),
-                        render::spawn_chunk_mesh_tasks
+                        lighting::spawn_lighting_tasks
                             .after(generation::tasks::collect_chunk_gen_tasks),
+                        lighting::collect_lighting_tasks
+                            .after(lighting::spawn_lighting_tasks),
+                        render::spawn_chunk_mesh_tasks
+                            .after(lighting::collect_lighting_tasks),
                         render::collect_chunk_mesh_tasks
                             .after(render::spawn_chunk_mesh_tasks),
                         render::unload_chunks.after(render::collect_chunk_mesh_tasks),
@@ -57,6 +62,9 @@ fn setup_chunk_material(
 ) {
     let material = materials.add(StandardMaterial {
         base_color_texture: Some(atlas.atlas.clone()),
+        
+        base_color: Color::WHITE,
+        unlit: true,
         ..Default::default()
     });
 
@@ -65,6 +73,12 @@ fn setup_chunk_material(
 
 #[derive(Component, Deref, DerefMut, Hash, Eq, PartialEq, Clone, Copy, Debug)]
 pub struct ChunkPos(pub IVec3);
+
+impl std::fmt::Display for ChunkPos {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl ChunkPos {
     pub fn new(x: i32, y: i32, z: i32) -> Self {
@@ -104,6 +118,7 @@ impl ChunkPos {
 #[derive(Component, Clone)]
 pub struct ChunkData {
     pub blocks: [BlockId; CHUNK_VOLUME],
+    pub light: [u8; CHUNK_VOLUME],
 
     pub vertice_count: u64,
 }
@@ -112,6 +127,7 @@ impl ChunkData {
     pub fn new() -> Self {
         Self {
             blocks: [AIR_ID; CHUNK_VOLUME],
+            light: [0; CHUNK_VOLUME],
             vertice_count: 0,
         }
     }

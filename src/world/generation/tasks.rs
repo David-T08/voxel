@@ -11,8 +11,8 @@ use crate::world::{WORLD_MAX_CHUNK_Y, WORLD_MIN_CHUNK_Y, WorldState};
 #[derive(Component)]
 pub struct ChunkGenTask(pub Task<(ColumnPos, Vec<(ChunkPos, ChunkData)>)>);
 
-const MAX_GEN_TASKS_PER_FRAME: usize = 8;
-const MAX_ACTIVE_GEN_TASKS: usize = 32;
+const MAX_GEN_TASKS_PER_FRAME: usize = 16;
+const MAX_ACTIVE_GEN_TASKS: usize = 16;
 
 pub fn generate_column(
     generator: &TerrainNoise,
@@ -87,9 +87,20 @@ pub fn collect_chunk_gen_tasks(
                 for (chunk_pos, chunk) in chunks {
                     if world.get_chunk(&chunk_pos).is_none() {
                         world.insert_chunk(chunk_pos, chunk);
-
-                        if streaming.queued_mesh.insert(chunk_pos) {
-                            streaming.to_mesh.push_back(chunk_pos);
+                    }
+                }
+                
+                for cy in WORLD_MIN_CHUNK_Y..=WORLD_MAX_CHUNK_Y {
+                    for column in [
+                        column,
+                        ColumnPos::new(column.x - 1, column.z),
+                        ColumnPos::new(column.x + 1, column.z),
+                        ColumnPos::new(column.x, column.z - 1),
+                        ColumnPos::new(column.x, column.z + 1),
+                    ] {
+                        let pos = ChunkPos::new(column.x, cy, column.z);
+                        if streaming.queued_light.insert(pos) {
+                            streaming.to_light.push_back(pos);
                         }
                     }
                 }

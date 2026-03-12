@@ -17,7 +17,6 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Startup, 
                 (
-                    lock_cursor, 
                     spawn_player,
                     interaction::selection::setup_selection_box
                 ))
@@ -26,7 +25,8 @@ impl Plugin for PlayerPlugin {
                 Update, 
                 (
                     input::capture, 
-                    camera::update, 
+                    camera::update,
+                    camera::set_mouse,
                     interaction::selection::update_block_target,
                     interaction::selection::update_selection_box,
                     interaction::placement::tick.run_if(resource_exists::<BlockRegistry>),
@@ -73,14 +73,9 @@ fn spawn_player(mut commands: Commands) {
         }),
         PlayerCamera::default(),
         ChunkViewer {
-            horizontal_radius: 64,
+            horizontal_radius: 32,
         },
     ));
-}
-
-fn lock_cursor(mut cursor: Single<&mut CursorOptions>) {
-    cursor.grab_mode = bevy::window::CursorGrabMode::Confined;
-    cursor.visible = false;
 }
 
 #[derive(Component)]

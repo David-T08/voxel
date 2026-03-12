@@ -4,6 +4,7 @@ use std::collections::{HashSet, VecDeque};
 const MAX_TOTAL_GENERATE_QUEUE: usize = 1024;
 const MAX_GENERATE_QUEUE_PER_FRAME: usize = 256;
 const MAX_TOTAL_MESH_QUEUE: usize = 256;
+const MAX_TOTAL_LIGHT_QUEUE: usize = 512;
 const MAX_UNLOAD_QUEUE_PER_FRAME: usize = 512;
 
 use crate::{chunks::ChunkPos, debugging::DebugRenderStats};
@@ -31,10 +32,14 @@ pub fn chunk_priority(center: ColumnPos, pos: ColumnPos) -> i32 {
 pub struct ChunkStreamingState {
     pub desired: HashSet<ColumnPos>,
     pub active: HashSet<ColumnPos>,
-    pub generating: HashSet<ColumnPos>,
 
     pub to_generate: VecDeque<ColumnPos>,
     pub queued_generate: HashSet<ColumnPos>,
+    pub generating: HashSet<ColumnPos>,
+    
+    pub to_light: VecDeque<ChunkPos>,
+    pub queued_light: HashSet<ChunkPos>,
+    pub lighting: HashSet<ChunkPos>,
 
     pub to_mesh: VecDeque<ChunkPos>,
     pub queued_mesh: HashSet<ChunkPos>,
@@ -63,8 +68,8 @@ fn prune_generate_queue(streaming: &mut ChunkStreamingState, center: ColumnPos) 
     streaming.queued_generate = streaming.to_generate.iter().copied().collect();
 }
 
-fn prune_mesh_queue(streaming: &mut ChunkStreamingState) {
-    let retained: Vec<_> = streaming
+fn prune_mesh_queue(streaming: &mut ChunkStreamingState, center: ColumnPos) {
+    let mut retained: Vec<_> = streaming
         .to_mesh
         .drain(..)
         .filter(|pos| {
@@ -72,9 +77,27 @@ fn prune_mesh_queue(streaming: &mut ChunkStreamingState) {
             streaming.active.contains(&column) && streaming.desired.contains(&column)
         })
         .collect();
+    
+    retained.sort_by_key(|pos| chunk_priority(center, ColumnPos::new(pos.x, pos.z)));
 
     streaming.to_mesh = retained.into_iter().collect();
     streaming.queued_mesh = streaming.to_mesh.iter().copied().collect();
+}
+
+fn prune_light_queue(streaming: &mut ChunkStreamingState, center: ColumnPos) {
+    let mut retained: Vec<_> = streaming
+        .to_light
+        .drain(..)
+        .filter(|pos| {
+            let column = ColumnPos::new(pos.x, pos.z);
+            streaming.active.contains(&column) && streaming.desired.contains(&column)
+        })
+        .collect();
+    
+    retained.sort_by_key(|pos| chunk_priority(center, ColumnPos::new(pos.x, pos.z)));
+
+    streaming.to_light = retained.into_iter().collect();
+    streaming.queued_light = streaming.to_light.iter().copied().collect();
 }
 
 pub fn request_columns_for_viewers(
@@ -115,7 +138,11 @@ pub fn update_chunk_queues(
     }
 
     if streaming.to_mesh.len() > MAX_TOTAL_MESH_QUEUE {
-        prune_mesh_queue(&mut streaming);
+        prune_mesh_queue(&mut streaming, center);
+    }
+    
+    if streaming.to_light.len() > MAX_TOTAL_LIGHT_QUEUE {
+        prune_light_queue(&mut streaming, center);
     }
 
     let mut missing: Vec<ColumnPos> = streaming
@@ -163,7 +190,21 @@ pub fn mark_dirty_chunk(
     
     chunk: ChunkPos
 ) {
-    if streaming.queued_mesh.insert(chunk) {
-        streaming.to_mesh.push_front(chunk);
+    if streaming.queued_light.insert(chunk) {
+        streaming.to_light.push_front(chunk);
     }
+}
+
+pub fn mark_chunk_and_neighbors_for_light(
+    streaming: &mut ChunkStreamingState,
+    chunk: ChunkPos,
+) {
+    mark_dirty_chunk(streaming, chunk);
+
+    mark_dirty_chunk(streaming, ChunkPos::new(chunk.x + 1, chunk.y, chunk.z));
+    mark_dirty_chunk(streaming, ChunkPos::new(chunk.x - 1, chunk.y, chunk.z));
+    mark_dirty_chunk(streaming, ChunkPos::new(chunk.x, chunk.y + 1, chunk.z));
+    mark_dirty_chunk(streaming, ChunkPos::new(chunk.x, chunk.y - 1, chunk.z));
+    mark_dirty_chunk(streaming, ChunkPos::new(chunk.x, chunk.y, chunk.z + 1));
+    mark_dirty_chunk(streaming, ChunkPos::new(chunk.x, chunk.y, chunk.z - 1));
 }

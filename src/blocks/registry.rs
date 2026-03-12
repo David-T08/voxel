@@ -30,6 +30,8 @@ impl RegistryId for BlockId {
 #[derive(Debug, Clone)]
 pub struct BlockDefinition {
     pub textures: BlockTextures,
+    pub opaque: bool,
+    pub emission: u8,
 }
 
 #[derive(Resource, Default)]
@@ -57,16 +59,17 @@ impl BlockRegistryInner {
         &mut self,
         name: String,
         block_textures: BlockTexturesAsset,
+        opaque: bool,
         tex_registry: &BlockTextureRegistry,
         atlas: &BlockAtlas
     ) -> Option<BlockDefinition> {
         let id = self
             .names
-            .register(name)
+            .register(name.clone())
             .expect("failed to register {name} because frozen name registry");
         let resolved = block_textures.resolve(tex_registry, atlas).unwrap();
 
-        let def = BlockDefinition { textures: resolved };
+        let def = BlockDefinition { textures: resolved, opaque, emission: if name == "core:stone2" {15} else {0}};
 
         let cloned = def.clone();
         self.definitions.insert_with_id(id, def);
@@ -82,8 +85,20 @@ impl BlockRegistryInner {
                 id,
                 BlockDefinition {
                     textures: BlockTextures::from_all([[0.0; 2]; 4]),
+                    opaque: false,
+                    emission: 0,
                 },
             )
             .unwrap();
+    }
+    
+    pub fn get_block(&self, id: BlockId) -> Option<&BlockDefinition> {
+        self.definitions.get(id)
+    }
+    
+    pub fn is_opaque(&self, id: BlockId) -> bool {
+        self.get_block(id)
+            .map(|block| block.opaque)
+            .unwrap_or(true)
     }
 }

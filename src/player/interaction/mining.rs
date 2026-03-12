@@ -15,6 +15,6 @@ pub fn tick(
         }
         
         world.set_block(target.voxel.x, target.voxel.y, target.voxel.z, BlockId(0));
-        streaming::mark_dirty_chunk(&mut streaming_state, ChunkPos::from_world(target.voxel.x, target.voxel.y, target.voxel.z));
+        streaming::mark_chunk_and_neighbors_for_light(&mut streaming_state, ChunkPos::from_world(target.voxel.x, target.voxel.y, target.voxel.z));
     };
 }
