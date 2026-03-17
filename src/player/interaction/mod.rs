@@ -1,3 +1,3 @@
-pub mod selection;
-pub mod placement;
 pub mod mining;
+pub mod placement;
+pub mod selection;

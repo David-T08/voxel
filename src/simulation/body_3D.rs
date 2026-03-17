@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::world::WorldState;
 use super::aabb;
+use crate::world::WorldState;
 
 pub struct CharacterBody3DConfig {
     pub walk_speed: f32,
@@ -24,27 +24,27 @@ impl Default for CharacterBody3DConfig {
 #[derive(Component)]
 pub struct BoxCollider3D {
     pub size: Vec3,
-    
-    half_size: Vec3
+
+    half_size: Vec3,
 }
 
 impl BoxCollider3D {
     pub fn new(size: Vec3) -> Self {
         Self {
             size,
-            half_size: size / 2.0
+            half_size: size / 2.0,
         }
     }
-    
+
     pub fn half_size(&self) -> Vec3 {
         self.half_size
     }
-    
+
     pub fn aabb_min_max(&self, transform: &Transform) -> (Vec3, Vec3) {
         let half = self.half_size();
         let aabb_min = transform.translation - half;
         let aabb_max = transform.translation + half;
-        
+
         (aabb_min, aabb_max)
     }
 }
@@ -55,8 +55,8 @@ pub struct CharacterBody3D {
     pub affected_by_gravity: bool,
     pub grounded: bool,
     pub noclip: bool,
-    
-    pub config: CharacterBody3DConfig
+
+    pub config: CharacterBody3DConfig,
 }
 
 impl Default for CharacterBody3D {
@@ -66,8 +66,8 @@ impl Default for CharacterBody3D {
             affected_by_gravity: true,
             grounded: false,
             noclip: false,
-            
-            config: CharacterBody3DConfig::default()
+
+            config: CharacterBody3DConfig::default(),
         }
     }
 }
@@ -85,7 +85,7 @@ pub fn move_bodies(
             body.grounded = false;
             continue;
         }
-                
+
         body.grounded = false;
 
         if body.affected_by_gravity {

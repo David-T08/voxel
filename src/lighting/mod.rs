@@ -9,11 +9,15 @@ use bevy::{
 };
 
 use crate::{
-    async_util::pipeline::VersionedTask, blocks::{AIR_ID, BlockId, BlockRegistry}, chunks::{
+    async_util::pipeline::VersionedTask,
+    blocks::{AIR_ID, BlockId, BlockRegistry},
+    chunks::{
         CHUNK_SIZE, CHUNK_VOLUME, ChunkData, ChunkPos,
         render::ChunkRenderMap,
         streaming::{self, ChunkStreamingState, ColumnPos},
-    }, debugging::DebugSystemTimes, world::WorldState
+    },
+    debugging::DebugSystemTimes,
+    world::WorldState,
 };
 
 const MAX_LIGHTING_TASKS_PER_FRAME: usize = 64;
@@ -54,13 +58,16 @@ pub struct NeighborChunkLightInput {
 }
 
 pub type VersionedLightTaskInput = VersionedTask<ChunkPos, LightTaskInput>;
-pub type VersionedLightTaskResult= VersionedTask<ChunkPos, LightTaskResult>;
+pub type VersionedLightTaskResult = VersionedTask<ChunkPos, LightTaskResult>;
 
 #[derive(Component)]
 pub struct ChunkLightTask(pub Task<VersionedLightTaskResult>);
 
-pub fn generate_light(input: VersionedLightTaskInput, registry: &BlockRegistry) -> VersionedLightTaskResult {
-    let mut light = [0u8; CHUNK_VOLUME];//input.data.center_light;
+pub fn generate_light(
+    input: VersionedLightTaskInput,
+    registry: &BlockRegistry,
+) -> VersionedLightTaskResult {
+    let mut light = [0u8; CHUNK_VOLUME]; //input.data.center_light;
     let mut queue = VecDeque::<(usize, usize, usize)>::new();
     let mut overflow = Vec::<LightSeed>::new();
 
@@ -199,7 +206,7 @@ pub fn generate_light(input: VersionedLightTaskInput, registry: &BlockRegistry) 
     VersionedTask {
         key: input.key,
         version: input.version,
-        data: LightTaskResult { light, overflow }
+        data: LightTaskResult { light, overflow },
     }
 }
 
@@ -391,9 +398,10 @@ fn seed_from_neighbor_borders(
     let max = CHUNK_SIZE - 1;
 
     // left neighbor seeds
-    if let (Some(neighbor_voxels), Some(neighbor_light)) =
-        (input.data.left.voxels.as_ref(), input.data.left.light.as_ref())
-    {
+    if let (Some(neighbor_voxels), Some(neighbor_light)) = (
+        input.data.left.voxels.as_ref(),
+        input.data.left.light.as_ref(),
+    ) {
         for y in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 let src_i = ChunkData::index(max, y, z);
@@ -408,9 +416,10 @@ fn seed_from_neighbor_borders(
     }
 
     // right neighbor seeds
-    if let (Some(neighbor_voxels), Some(neighbor_light)) =
-        (input.data.right.voxels.as_ref(), input.data.right.light.as_ref())
-    {
+    if let (Some(neighbor_voxels), Some(neighbor_light)) = (
+        input.data.right.voxels.as_ref(),
+        input.data.right.light.as_ref(),
+    ) {
         for y in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 let src_i = ChunkData::index(0, y, z);
@@ -425,9 +434,10 @@ fn seed_from_neighbor_borders(
     }
 
     // bottom neighbor seeds
-    if let (Some(neighbor_voxels), Some(neighbor_light)) =
-        (input.data.bottom.voxels.as_ref(), input.data.bottom.light.as_ref())
-    {
+    if let (Some(neighbor_voxels), Some(neighbor_light)) = (
+        input.data.bottom.voxels.as_ref(),
+        input.data.bottom.light.as_ref(),
+    ) {
         for x in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 let src_i = ChunkData::index(x, max, z);
@@ -442,9 +452,10 @@ fn seed_from_neighbor_borders(
     }
 
     // top neighbor seeds
-    if let (Some(neighbor_voxels), Some(neighbor_light)) =
-        (input.data.top.voxels.as_ref(), input.data.top.light.as_ref())
-    {
+    if let (Some(neighbor_voxels), Some(neighbor_light)) = (
+        input.data.top.voxels.as_ref(),
+        input.data.top.light.as_ref(),
+    ) {
         for x in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 let src_i = ChunkData::index(x, 0, z);
@@ -459,9 +470,10 @@ fn seed_from_neighbor_borders(
     }
 
     // back neighbor seeds
-    if let (Some(neighbor_voxels), Some(neighbor_light)) =
-        (input.data.back.voxels.as_ref(), input.data.back.light.as_ref())
-    {
+    if let (Some(neighbor_voxels), Some(neighbor_light)) = (
+        input.data.back.voxels.as_ref(),
+        input.data.back.light.as_ref(),
+    ) {
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 let src_i = ChunkData::index(x, y, max);
@@ -476,9 +488,10 @@ fn seed_from_neighbor_borders(
     }
 
     // front neighbor seeds
-    if let (Some(neighbor_voxels), Some(neighbor_light)) =
-        (input.data.front.voxels.as_ref(), input.data.front.light.as_ref())
-    {
+    if let (Some(neighbor_voxels), Some(neighbor_light)) = (
+        input.data.front.voxels.as_ref(),
+        input.data.front.light.as_ref(),
+    ) {
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 let src_i = ChunkData::index(x, y, 0);
@@ -604,7 +617,7 @@ pub fn spawn_lighting_tasks(
                     .pending_light_seeds
                     .remove(&center)
                     .unwrap_or_default(),
-            }
+            },
         };
 
         let task = pool.spawn(async move { generate_light(input, &reg) });

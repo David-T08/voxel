@@ -19,20 +19,20 @@ pub struct MoveInput {
 pub struct MouseInput {
     pub m1_held: bool,
     pub m1_pressed: bool,
-    
+
     pub m2_held: bool,
     pub m2_pressed: bool,
-    
+
     pub m3_held: bool,
     pub m3_pressed: bool,
-    
+
     pub cursor_unlocked: bool,
 }
 
 #[derive(Component, Default)]
 pub struct PlayerInput {
     pub movement: MoveInput,
-    pub mouse: MouseInput
+    pub mouse: MouseInput,
 }
 
 pub fn capture(
@@ -43,7 +43,7 @@ pub fn capture(
 ) {
     capture_movement(&keyboard, &mut input.movement, &time);
     capture_mouse_clicks(&mouse, &mut input.mouse);
-    
+
     if keyboard.just_pressed(KeyCode::Escape) {
         input.mouse.cursor_unlocked = !input.mouse.cursor_unlocked;
     }
@@ -53,7 +53,7 @@ fn capture_mouse_clicks(mouse: &ButtonInput<MouseButton>, input: &mut MouseInput
     input.m1_held = mouse.pressed(MouseButton::Left);
     input.m2_held = mouse.pressed(MouseButton::Right);
     input.m3_held = mouse.pressed(MouseButton::Middle);
-    
+
     input.m1_pressed = mouse.just_pressed(MouseButton::Left);
     input.m2_pressed = mouse.just_pressed(MouseButton::Right);
     input.m3_pressed = mouse.just_pressed(MouseButton::Middle);

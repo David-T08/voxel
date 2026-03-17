@@ -23,7 +23,11 @@ pub fn tick(
         }
 
         world.set_block(target.voxel.x, target.voxel.y, target.voxel.z, BlockId(0));
-        debug!("[interaction/mining]: Broke {} at {}", target.voxel, ChunkPos::from_world(target.voxel.x, target.voxel.y, target.voxel.z));
+        debug!(
+            "[interaction/mining]: Broke {} at {}",
+            target.voxel,
+            ChunkPos::from_world(target.voxel.x, target.voxel.y, target.voxel.z)
+        );
 
         let center = ChunkPos::from_world(target.voxel.x, target.voxel.y, target.voxel.z);
 

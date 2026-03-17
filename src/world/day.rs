@@ -29,9 +29,9 @@ impl Default for DayCycle {
             sun_strength,
             baked_sun,
             sky_color: [1.0; 3],
-            day_length_seconds: 20.0//60.0 * 20.0,
+            day_length_seconds: 20.0, //60.0 * 20.0,
         }
-    } 
+    }
 }
 
 fn compute_sky_color(time_of_day: f32) -> [f32; 3] {

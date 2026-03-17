@@ -92,7 +92,14 @@ impl Plugin for DebuggingPlugin {
         app.add_plugins(FrameTimeDiagnosticsPlugin::default())
             .add_plugins(WireframePlugin::default())
             .add_systems(Startup, setup)
-            .add_systems(Update, (update_frame_timing_series, update_debug_text, toggle_wireframe))
+            .add_systems(
+                Update,
+                (
+                    update_frame_timing_series,
+                    update_debug_text,
+                    toggle_wireframe,
+                ),
+            )
             .insert_resource(WireframeConfig {
                 global: false,
                 ..default()
@@ -135,7 +142,7 @@ pub struct DebugRenderStats {
     pub faces: u64,
     pub triangles: u64,
     pub vertices: u64,
-    
+
     pub raycast_voxel_hit: IVec3,
 }
 
@@ -153,7 +160,7 @@ impl DebugSystemTimes {
     pub fn push_frame_time(&mut self, ms: f64) {
         self.frame_time.push(ms);
     }
-    
+
     pub fn push_update_chunk_queues(&mut self, ms: f64) {
         self.update_chunk_queues.push(ms);
     }
@@ -359,7 +366,7 @@ fn update_debug_text(
         stream.light,
         stream.mesh,
     );
-        
+
     for mut text in &mut text {
         *text = Text::new(debug_text.clone());
     }

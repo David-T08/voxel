@@ -2,11 +2,14 @@ use bevy::prelude::*;
 use jsonc_parser::parse_to_serde_value;
 use std::{fs, sync::Arc};
 
+pub mod material;
 pub mod registry;
 
 use crate::{
     blocks::registry::BlockRegistryInner,
-    textures::{BlockDefinitionAsset, BlockTextureRegistry, BlockTextureRegistryReady, atlas::BlockAtlas},
+    textures::{
+        BlockDefinitionAsset, BlockTextureRegistry, BlockTextureRegistryReady, atlas::BlockAtlas,
+    },
 };
 pub use registry::{BlockId, BlockRegistry};
 
@@ -28,7 +31,11 @@ impl Plugin for BlockPlugin {
 #[derive(Resource)]
 pub struct BlockRegistryReady;
 
-fn load_block_definitions(mut commands: Commands, tex_registry: Res<BlockTextureRegistry>, atlas: Res<BlockAtlas>) {
+fn load_block_definitions(
+    mut commands: Commands,
+    tex_registry: Res<BlockTextureRegistry>,
+    atlas: Res<BlockAtlas>,
+) {
     let mut block_registry = BlockRegistryInner::default();
     block_registry.register_air();
 
@@ -51,18 +58,29 @@ fn load_block_definitions(mut commands: Commands, tex_registry: Res<BlockTexture
             .unwrap();
         let data = serde_json::from_value::<BlockDefinitionAsset>(value).unwrap();
 
-        match block_registry.register_from_asset(name.clone(), data.textures, true, &tex_registry, &atlas) {
-            Some(_) => println!(
-                "Added blocks/{stem} to block registry, registered as: {:?}",
-                block_registry.names.name_to_id(&name)
+        match block_registry.register_from_asset(
+            name.clone(),
+            data.textures,
+            true,
+            &tex_registry,
+            &atlas,
+        ) {
+            Some(_) => info!(
+                "[registry/block]: Added blocks/{stem} as {}",
+                block_registry.names.name_to_id(&name).unwrap()
             ),
-            None => eprintln!("Failed to add block {name} to registry"),
+            None => error!("[registry/block]: Failed to add block {name}"),
         };
     }
 
     block_registry.freeze();
-    
-    dbg!(block_registry.get_block(block_registry.names.name_to_id("core:stone").unwrap()).unwrap().emission);
+
+    dbg!(
+        block_registry
+            .get_block(block_registry.names.name_to_id("core:stone").unwrap())
+            .unwrap()
+            .emission
+    );
     commands.insert_resource(BlockRegistry(Arc::new(block_registry)));
     commands.insert_resource(BlockRegistryReady);
 }

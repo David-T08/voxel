@@ -1,7 +1,10 @@
 use super::{Player, input::PlayerInput};
-use crate::{fsm::{StateLifecycle, StateMachine, StateUpdate, Transition}, simulation::body_3D::CharacterBody3D};
-use bevy::prelude::*;
 use crate::interpolation::exp_smooth;
+use crate::{
+    fsm::{StateLifecycle, StateMachine, StateUpdate, Transition},
+    simulation::body_3D::CharacterBody3D,
+};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct PlayerController {
@@ -19,10 +22,7 @@ pub struct PlayerController {
 }
 
 pub fn drive_character_body(
-    player: Single<
-        (&Transform, &mut PlayerController, &mut CharacterBody3D),
-        With<Player>,
-    >,
+    player: Single<(&Transform, &mut PlayerController, &mut CharacterBody3D), With<Player>>,
     time: Res<Time<Fixed>>,
 ) {
     let dt = time.delta_secs();
@@ -44,35 +44,30 @@ pub fn drive_character_body(
     } else {
         body.config.walk_speed
     };
-    
-    let desired_world = (right * local.x + forward * local.y) * move_speed;
-    
-    body.current_velocity.x =
-        exp_smooth(body.current_velocity.x, desired_world.x, 20.0, dt);
 
-    body.current_velocity.z =
-        exp_smooth(body.current_velocity.z, desired_world.z, 20.0, dt);
+    let desired_world = (right * local.x + forward * local.y) * move_speed;
+
+    body.current_velocity.x = exp_smooth(body.current_velocity.x, desired_world.x, 20.0, dt);
+
+    body.current_velocity.z = exp_smooth(body.current_velocity.z, desired_world.z, 20.0, dt);
 
     body.noclip = controller.flying;
     body.affected_by_gravity = !controller.flying;
-    
+
     if controller.flying {
-         body.current_velocity.y =
-             (controller.holding_jump as i8 as f32 - controller.crouching as i8 as f32) * 6.5;
-         body.grounded = false;
-     } else if controller.jump_requested && body.grounded {
-         body.current_velocity.y = body.config.jump_force;
-         controller.jump_requested = false;
-     } else {
-         controller.jump_requested = false;
-     }
+        body.current_velocity.y =
+            (controller.holding_jump as i8 as f32 - controller.crouching as i8 as f32) * 6.5;
+        body.grounded = false;
+    } else if controller.jump_requested && body.grounded {
+        body.current_velocity.y = body.config.jump_force;
+        controller.jump_requested = false;
+    } else {
+        controller.jump_requested = false;
+    }
 }
 
 pub fn tick(
-    player: Single<
-        (&mut PlayerController, &mut PlayerInput, &CharacterBody3D),
-        With<Player>,
-    >,
+    player: Single<(&mut PlayerController, &mut PlayerInput, &CharacterBody3D), With<Player>>,
     time: Res<Time<Fixed>>,
 ) {
     let (mut controller, mut input, body) = player.into_inner();
@@ -160,7 +155,9 @@ impl StateUpdate<MoveContext, MoveCmd> for MoveState {
                     return Transition::Switch(MoveState::Run);
                 }
 
-                out.push(MoveCmd::SetVelocityTarget(ctx.input_direction.normalize_or_zero()));
+                out.push(MoveCmd::SetVelocityTarget(
+                    ctx.input_direction.normalize_or_zero(),
+                ));
                 Transition::Stay
             }
 
@@ -173,7 +170,9 @@ impl StateUpdate<MoveContext, MoveCmd> for MoveState {
                     return Transition::Switch(MoveState::Walking);
                 }
 
-                out.push(MoveCmd::SetVelocityTarget(ctx.input_direction.normalize_or_zero()));
+                out.push(MoveCmd::SetVelocityTarget(
+                    ctx.input_direction.normalize_or_zero(),
+                ));
                 Transition::Stay
             }
         }

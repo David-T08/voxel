@@ -47,9 +47,7 @@ pub fn spawn_chunk_gen_tasks(
             break;
         };
 
-        if !streaming.desired.contains(&column)
-            || streaming.active.contains(&column)
-        {
+        if !streaming.desired.contains(&column) || streaming.active.contains(&column) {
             streaming.generate.finish(&column);
             continue;
         }

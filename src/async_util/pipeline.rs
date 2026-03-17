@@ -1,10 +1,14 @@
-use std::{collections::{HashSet, VecDeque}, fmt::{Debug, Display}, hash::Hash};
+use std::{
+    collections::{HashSet, VecDeque},
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 #[derive(Default, Debug)]
 pub struct PipelineQueue<K> {
     pub to_run: VecDeque<K>,
     pub queued: HashSet<K>,
-    pub running: HashSet<K>
+    pub running: HashSet<K>,
 }
 
 pub struct VersionedTask<K: Debug, T> {
@@ -36,47 +40,47 @@ impl<K: Copy + Eq + PartialEq + Hash> PipelineQueue<K> {
         if self.running.contains(&key) {
             return false;
         }
-        
+
         if self.queued.insert(key) {
             self.to_run.push_back(key);
-            return true
+            return true;
         }
-        
+
         false
     }
-    
+
     pub fn enqueue_front(&mut self, key: K) -> bool {
         if self.running.contains(&key) {
             return false;
         }
-        
+
         if self.queued.insert(key) {
             self.to_run.push_front(key);
-            return true
+            return true;
         }
-        
+
         false
     }
-    
+
     pub fn pop_next(&mut self) -> Option<K> {
         let key = self.to_run.pop_front()?;
         self.queued.remove(&key);
         self.running.insert(key);
         Some(key)
     }
-    
+
     pub fn mark_running(&mut self, key: K) {
         self.running.insert(key);
     }
-    
+
     pub fn finish(&mut self, key: &K) {
         self.running.remove(key);
     }
-    
+
     pub fn is_busy(&self, key: &K) -> bool {
         self.queued.contains(key) || self.running.contains(key)
     }
-    
+
     pub fn cancel(&mut self, key: &K) {
         self.queued.remove(key);
         self.running.remove(key);

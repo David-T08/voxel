@@ -43,8 +43,16 @@ pub struct BlockTexturesAsset {
 }
 
 impl BlockTexturesAsset {
-    pub fn resolve(self, reg: &BlockTextureRegistry, atlas: &BlockAtlas) -> Result<BlockTextures, String> {
-        fn get_tex(reg: &BlockTextureRegistry, name: &str, atlas: &BlockAtlas) -> Result<[[f32; 2]; 4], String> {
+    pub fn resolve(
+        self,
+        reg: &BlockTextureRegistry,
+        atlas: &BlockAtlas,
+    ) -> Result<BlockTextures, String> {
+        fn get_tex(
+            reg: &BlockTextureRegistry,
+            name: &str,
+            atlas: &BlockAtlas,
+        ) -> Result<[[f32; 2]; 4], String> {
             reg.name_to_id(name)
                 .ok_or_else(|| format!("unknown block texture: {name}"))
                 .map(|id| atlas.face_uvs(id).unwrap())
@@ -77,42 +85,42 @@ impl BlockTexturesAsset {
                 self.top
                     .as_deref()
                     .ok_or_else(|| "missing top texture".to_string())?,
-                atlas
+                atlas,
             )?,
             get_tex(
                 reg,
                 self.bottom
                     .as_deref()
                     .ok_or_else(|| "missing bottom texture".to_string())?,
-                atlas
+                atlas,
             )?,
             get_tex(
                 reg,
                 self.front
                     .as_deref()
                     .ok_or_else(|| "missing front texture".to_string())?,
-                atlas
+                atlas,
             )?,
             get_tex(
                 reg,
                 self.back
                     .as_deref()
                     .ok_or_else(|| "missing back texture".to_string())?,
-                atlas
+                atlas,
             )?,
             get_tex(
                 reg,
                 self.left
                     .as_deref()
                     .ok_or_else(|| "missing left texture".to_string())?,
-                atlas
+                atlas,
             )?,
             get_tex(
                 reg,
                 self.right
                     .as_deref()
                     .ok_or_else(|| "missing right texture".to_string())?,
-                atlas
+                atlas,
             )?,
         ))
     }
@@ -244,12 +252,12 @@ fn load_block_textures(
         let handle: Handle<Image> = asset_server.load(&asset_path);
 
         match atlas.insert(id, handle) {
-            Ok(()) => println!(
-                "Added {asset_path} to block atlas, registered as: {:?}, id->name={:?}",
-                reg.name_to_id(&key),
-                reg.id_to_name(id)
+            Ok(()) => info!(
+                "[atlas/block]: Added {asset_path} as: {} ({})",
+                reg.name_to_id(&key).unwrap(),
+                reg.id_to_name(id).unwrap()
             ),
-            Err(e) => eprintln!("Failed to add {asset_path} ({id}): {:?}", e),
+            Err(e) => error!("[atlas/block]: Failed to add {asset_path} ({id}): {:?}", e),
         };
     }
 

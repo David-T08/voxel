@@ -8,10 +8,20 @@ use std::{collections::HashMap, time::Instant};
 
 use super::{ChunkData, ChunkPos};
 use crate::{
-    VOXEL_SIZE, blocks::{AIR_ID, BlockRegistry, material::{ATTRIBUTE_LIGHT, VoxelMaterial}}, chunks::{
+    VOXEL_SIZE,
+    blocks::{
+        AIR_ID, BlockRegistry,
+        material::{ATTRIBUTE_LIGHT, VoxelMaterial},
+    },
+    chunks::{
         CHUNK_SIZE,
         streaming::{ChunkStreamingState, ColumnPos},
-    }, debugging::{DebugRenderStats, DebugSystemTimes}, lighting, player::camera::PlayerCamera, textures::Face, world::{WORLD_MAX_CHUNK_Y, WORLD_MIN_CHUNK_Y, WorldState, day::DayCycle}
+    },
+    debugging::{DebugRenderStats, DebugSystemTimes},
+    lighting,
+    player::camera::PlayerCamera,
+    textures::Face,
+    world::{WORLD_MAX_CHUNK_Y, WORLD_MIN_CHUNK_Y, WorldState, day::DayCycle},
 };
 
 const MAX_MESH_TASKS_PER_FRAME: usize = 32;
@@ -259,9 +269,7 @@ pub fn spawn_chunk_mesh_tasks(
         };
 
         let column = ColumnPos::new(pos.x, pos.z);
-        if !streaming.active.contains(&column)
-            || !streaming.desired.contains(&column)
-        {
+        if !streaming.active.contains(&column) || !streaming.desired.contains(&column) {
             streaming.mesh.finish(&pos);
             continue;
         }
@@ -492,12 +500,7 @@ pub fn update_chunk_material(
     mut materials: ResMut<Assets<VoxelMaterial>>,
 ) {
     if let Some(mat) = materials.get_mut(&chunk_material.0) {
-        mat.sky_color = Vec4::new(
-            day.sky_color[0],
-            day.sky_color[1],
-            day.sky_color[2],
-            1.0,
-        );
+        mat.sky_color = Vec4::new(day.sky_color[0], day.sky_color[1], day.sky_color[2], 1.0);
 
         mat.fog_color = Vec4::new(
             (day.sky_color[0] * 0.75).clamp(0.0, 1.0),

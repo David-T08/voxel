@@ -1,6 +1,11 @@
 use bevy::prelude::*;
 
-use crate::{debugging::DebugRenderStats, player::camera::PlayerCamera, simulation::raycast::{VoxelHit, raycast_voxels}, world::WorldState};
+use crate::{
+    debugging::DebugRenderStats,
+    player::camera::PlayerCamera,
+    simulation::raycast::{VoxelHit, raycast_voxels},
+    world::WorldState,
+};
 
 #[derive(Resource, Default, Debug, Deref, DerefMut)]
 pub struct CurrentBlockTarget(pub Option<VoxelHit>);
@@ -12,19 +17,13 @@ pub fn update_block_target(
     cam_transform: Single<&GlobalTransform, With<PlayerCamera>>,
     world: Res<WorldState>,
     mut stats: ResMut<DebugRenderStats>,
-    
+
     mut target: ResMut<CurrentBlockTarget>,
 ) {
-
     let origin = cam_transform.translation();
     let dir = cam_transform.forward().as_vec3();
 
-    let hit = raycast_voxels (
-        origin,
-        dir,
-        4.0,
-        &world,
-    );
+    let hit = raycast_voxels(origin, dir, 4.0, &world);
 
     target.0 = hit;
     stats.raycast_voxel_hit = hit.map(|h| h.voxel).unwrap_or(IVec3::ZERO)

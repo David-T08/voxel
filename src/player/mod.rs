@@ -1,37 +1,39 @@
 use bevy::{prelude::*, window::CursorOptions};
 
 use crate::blocks::BlockRegistry;
-use crate::{chunks::streaming::ChunkViewer, fsm::StateMachine, player::camera::PlayerCamera};
 use crate::simulation::body_3D::{BoxCollider3D, CharacterBody3D};
+use crate::{chunks::streaming::ChunkViewer, fsm::StateMachine, player::camera::PlayerCamera};
 
 pub mod camera;
 pub mod controller;
-pub mod interaction;
 pub mod input;
+pub mod interaction;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<interaction::selection::CurrentBlockTarget>()
+        app.init_resource::<interaction::selection::CurrentBlockTarget>()
             .add_systems(
-                Startup, 
-                (
-                    spawn_player,
-                    interaction::selection::setup_selection_box
-                ))
-            .add_systems(FixedUpdate, (controller::tick, controller::drive_character_body).chain())
+                Startup,
+                (spawn_player, interaction::selection::setup_selection_box),
+            )
             .add_systems(
-                Update, 
+                FixedUpdate,
+                (controller::tick, controller::drive_character_body).chain(),
+            )
+            .add_systems(
+                Update,
                 (
-                    input::capture, 
+                    input::capture,
                     camera::update,
                     camera::set_mouse,
                     interaction::selection::update_block_target,
                     interaction::selection::update_selection_box,
                     interaction::placement::tick.run_if(resource_exists::<BlockRegistry>),
-                    interaction::mining::tick
-                ).chain());
+                    interaction::mining::tick,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -45,10 +47,7 @@ fn spawn_player(mut commands: Commands) {
         GlobalTransform::default(),
         input::PlayerInput::default(),
         CharacterBody3D::default(),
-        BoxCollider3D::new(Vec3::new(
-            0.55, 1.35, 0.55
-        )),
-        
+        BoxCollider3D::new(Vec3::new(0.55, 1.35, 0.55)),
         controller::PlayerController {
             fsm: StateMachine::new(controller::MoveState::Idle),
             flying: false,
@@ -73,7 +72,7 @@ fn spawn_player(mut commands: Commands) {
         }),
         PlayerCamera::default(),
         ChunkViewer {
-            horizontal_radius: 32,
+            horizontal_radius: 4,
         },
     ));
 }

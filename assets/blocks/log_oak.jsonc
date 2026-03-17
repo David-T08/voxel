@@ -1,5 +1,7 @@
 {
   "textures": {
-    "top": ""
+    "top": "core:log_oak_top",
+    "side": "core:log_oak",
+    "bottom": "core:log_oak_top"
   }
 }

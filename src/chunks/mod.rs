@@ -21,8 +21,7 @@ use crate::{
 pub struct ChunkPlugin;
 impl Plugin for ChunkPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<streaming::ChunkStreamingState>()
+        app.init_resource::<streaming::ChunkStreamingState>()
             .init_resource::<render::ChunkRenderMap>()
             // .init_resource::<streaming::StreamingViewState>()
             .add_systems(
@@ -34,20 +33,17 @@ impl Plugin for ChunkPlugin {
                         .run_if(not(resource_exists::<ChunkMaterial>)),
                     (
                         streaming::request_columns_for_viewers,
-                        streaming::update_chunk_queues
-                        ,//.after(streaming::request_columns_for_viewers),
-                        generation::tasks::spawn_chunk_gen_tasks
-                        ,//.after(streaming::update_chunk_queues),
-                        generation::tasks::collect_chunk_gen_tasks
-                        ,//.after(generation::tasks::spawn_chunk_gen_tasks),
-                        lighting::spawn_lighting_tasks
-                        ,//.after(generation::tasks::collect_chunk_gen_tasks),
-                        lighting::collect_lighting_tasks,//.after(lighting::spawn_lighting_tasks),
-                        render::spawn_chunk_mesh_tasks,//.after(lighting::collect_lighting_tasks),
-                        render::collect_chunk_mesh_tasks,//.after(render::spawn_chunk_mesh_tasks),
-                        render::unload_chunks,//.after(render::collect_chunk_mesh_tasks),
-                        render::update_chunk_material
-                    ).chain()
+                        streaming::update_chunk_queues, //.after(streaming::request_columns_for_viewers),
+                        generation::tasks::spawn_chunk_gen_tasks, //.after(streaming::update_chunk_queues),
+                        generation::tasks::collect_chunk_gen_tasks, //.after(generation::tasks::spawn_chunk_gen_tasks),
+                        lighting::spawn_lighting_tasks, //.after(generation::tasks::collect_chunk_gen_tasks),
+                        lighting::collect_lighting_tasks, //.after(lighting::spawn_lighting_tasks),
+                        render::spawn_chunk_mesh_tasks, //.after(lighting::collect_lighting_tasks),
+                        render::collect_chunk_mesh_tasks, //.after(render::spawn_chunk_mesh_tasks),
+                        render::unload_chunks,          //.after(render::collect_chunk_mesh_tasks),
+                        render::update_chunk_material,
+                    )
+                        .chain()
                         .run_if(resource_exists::<BlockRegistryReady>)
                         .run_if(resource_exists::<BlockAtlas>)
                         .run_if(resource_exists::<ChunkMaterial>),

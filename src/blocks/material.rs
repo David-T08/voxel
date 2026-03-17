@@ -25,7 +25,7 @@ pub struct VoxelMaterial {
     // x = start, y = end
     #[uniform(4)]
     pub fog_params: Vec4,
-    
+
     #[uniform(5)]
     pub sun_params: Vec4, // x = sun strength
 }

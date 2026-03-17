@@ -30,9 +30,7 @@ fn main() {
 
     tracing_subscriber::registry()
         // .with(EnvFilter::new("voxel=trace"))
-        .with(EnvFilter::new(
-            "info,voxel=trace",
-        ))
+        .with(EnvFilter::new("info,voxel=trace"))
         .with(fmt::layer().with_timer(timer))
         .init();
 

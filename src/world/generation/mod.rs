@@ -25,18 +25,18 @@ impl Biome {
         if height <= sea_level {
             return Biome::Ocean;
         }
-    
+
         if height <= sea_level + 2 {
             return Biome::Beach;
         }
-    
+
         if slope >= 4 || height >= 120 {
             if temp < 0.25 {
                 return Biome::Snow;
             }
             return Biome::Rocky;
         }
-    
+
         if temp < 0.2 {
             if humid < 0.5 {
                 Biome::Tundra
@@ -60,7 +60,7 @@ impl Biome {
                 Biome::Rainforest
             }
         }
-    }   
+    }
 }
 
 pub mod tasks;
@@ -73,7 +73,7 @@ pub struct TerrainNoise {
 
     pub temperature: FastNoiseLite,
     pub humidity: FastNoiseLite,
-    
+
     pub seed: i32,
 }
 
@@ -82,7 +82,13 @@ pub struct ClimateSample {
     pub humidity: f32,
 }
 
-fn sample_climate(noise: &TerrainNoise, x: f32, z: f32, height: i32, sea_level: i32) -> ClimateSample {
+fn sample_climate(
+    noise: &TerrainNoise,
+    x: f32,
+    z: f32,
+    height: i32,
+    sea_level: i32,
+) -> ClimateSample {
     let raw_temp = noise01(noise.temperature.get_noise_2d(x, z));
     let raw_humid = noise01(noise.humidity.get_noise_2d(x, z));
 
@@ -106,7 +112,7 @@ impl TerrainNoise {
         continent.set_fractal_octaves(Some(4));
         continent.set_fractal_lacunarity(Some(1.0));
         continent.set_fractal_gain(Some(0.25));
-        
+
         let mut hills = FastNoiseLite::with_seed(seed + 1);
         hills.set_noise_type(Some(NoiseType::OpenSimplex2));
         hills.set_frequency(Some(0.005));
@@ -114,7 +120,7 @@ impl TerrainNoise {
         hills.set_fractal_octaves(Some(3));
         hills.set_fractal_lacunarity(Some(1.6));
         hills.set_fractal_gain(Some(0.310));
-        
+
         let mut mountains = FastNoiseLite::with_seed(seed - 12);
         mountains.set_noise_type(Some(NoiseType::OpenSimplex2));
         mountains.set_frequency(Some(0.001));
@@ -122,7 +128,7 @@ impl TerrainNoise {
         mountains.set_fractal_octaves(Some(2));
         mountains.set_fractal_lacunarity(Some(1.2));
         mountains.set_fractal_gain(Some(0.310));
-        
+
         let mut detail = FastNoiseLite::with_seed(seed + 63);
         detail.set_noise_type(Some(NoiseType::OpenSimplex2));
         detail.set_frequency(Some(0.02));
@@ -130,7 +136,7 @@ impl TerrainNoise {
         detail.set_fractal_octaves(Some(3));
         detail.set_fractal_lacunarity(Some(1.6));
         detail.set_fractal_gain(Some(0.6));
-        
+
         let mut temperature = FastNoiseLite::with_seed(seed + 100);
         temperature.set_noise_type(Some(NoiseType::OpenSimplex2));
         temperature.set_frequency(Some(0.0008));
@@ -138,7 +144,7 @@ impl TerrainNoise {
         temperature.set_fractal_octaves(Some(3));
         temperature.set_fractal_lacunarity(Some(2.0));
         temperature.set_fractal_gain(Some(0.5));
-        
+
         let mut humidity = FastNoiseLite::with_seed(seed + 200);
         humidity.set_noise_type(Some(NoiseType::OpenSimplex2));
         humidity.set_frequency(Some(0.0012));
@@ -147,19 +153,19 @@ impl TerrainNoise {
         humidity.set_fractal_lacunarity(Some(2.0));
         humidity.set_fractal_gain(Some(0.5));
 
-        Self { 
+        Self {
             continent,
             hills,
             mountains,
             detail,
-            
+
             temperature,
             humidity,
-            
-            seed
+
+            seed,
         }
     }
-    
+
     pub fn clone(&self) -> Self {
         Self::new(self.seed)
     }
@@ -189,6 +195,7 @@ fn sample_height(noise: &TerrainNoise, x: f32, z: f32) -> i32 {
 
     height as i32
 }
+
 pub fn generate_chunk(
     generator: &TerrainNoise,
     pos: &ChunkPos,
