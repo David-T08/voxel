@@ -3,7 +3,7 @@ use bevy::tasks::futures_lite::future;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 
 use crate::blocks::BlockRegistry;
-use crate::chunks::streaming::{ChunkStreamingState, ColumnPos};
+use crate::chunks::streaming::{self, ChunkStreamingState, ColumnPos};
 use crate::chunks::{ChunkData, ChunkPos};
 use crate::world::generation::{TerrainNoise, generate_chunk};
 use crate::world::{WORLD_MAX_CHUNK_Y, WORLD_MIN_CHUNK_Y, WorldState};
@@ -37,26 +37,22 @@ pub fn spawn_chunk_gen_tasks(
     block_reg: Res<BlockRegistry>,
 ) {
     let pool = AsyncComputeTaskPool::get();
-    let seed = world.seed;
 
     for _ in 0..MAX_GEN_TASKS_PER_FRAME {
-        if streaming.generating.len() >= MAX_ACTIVE_GEN_TASKS {
+        if streaming.generate.running.len() >= MAX_ACTIVE_GEN_TASKS {
             break;
         }
 
-        let Some(column) = streaming.to_generate.pop_front() else {
+        let Some(column) = streaming.generate.pop_next() else {
             break;
         };
 
-        streaming.queued_generate.remove(&column);
         if !streaming.desired.contains(&column)
             || streaming.active.contains(&column)
-            || streaming.generating.contains(&column)
         {
+            streaming.generate.finish(&column);
             continue;
         }
-
-        streaming.generating.insert(column);
 
         let registry = block_reg.clone();
         let task_pos = column;
@@ -75,21 +71,27 @@ pub fn collect_chunk_gen_tasks(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut ChunkGenTask)>,
     mut world: ResMut<WorldState>,
-    mut streaming: ResMut<ChunkStreamingState>,
+    mut streaming_data: ResMut<ChunkStreamingState>,
 ) {
     for (entity, mut task) in &mut tasks {
         if let Some((column, chunks)) = future::block_on(future::poll_once(&mut task.0)) {
-            streaming.generating.remove(&column);
+            streaming_data.generate.finish(&column);
 
-            if streaming.desired.contains(&column) {
-                streaming.active.insert(column);
+            if streaming_data.desired.contains(&column) {
+                streaming_data.active.insert(column);
 
                 for (chunk_pos, chunk) in chunks {
                     if world.get_chunk(&chunk_pos).is_none() {
                         world.insert_chunk(chunk_pos, chunk);
+
+                        streaming::mark_chunk_and_neighbors_for_light(
+                            &mut world,
+                            &mut streaming_data,
+                            chunk_pos,
+                        );
                     }
                 }
-                
+
                 for cy in WORLD_MIN_CHUNK_Y..=WORLD_MAX_CHUNK_Y {
                     for column in [
                         column,
@@ -98,10 +100,11 @@ pub fn collect_chunk_gen_tasks(
                         ColumnPos::new(column.x, column.z - 1),
                         ColumnPos::new(column.x, column.z + 1),
                     ] {
-                        let pos = ChunkPos::new(column.x, cy, column.z);
-                        if streaming.queued_light.insert(pos) {
-                            streaming.to_light.push_back(pos);
-                        }
+                        streaming::mark_chunk_for_light(
+                            &mut world,
+                            &mut streaming_data,
+                            ChunkPos::new(column.x, cy, column.z),
+                        );
                     }
                 }
             }

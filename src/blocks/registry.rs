@@ -10,6 +10,12 @@ use crate::textures::{BlockTextureId, BlockTextureRegistry, BlockTextures, Block
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BlockId(pub u16);
 
+impl std::fmt::Display for BlockId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug)]
 pub enum BlockRegistryError<I> {
     DuplicateId(I),
@@ -61,7 +67,7 @@ impl BlockRegistryInner {
         block_textures: BlockTexturesAsset,
         opaque: bool,
         tex_registry: &BlockTextureRegistry,
-        atlas: &BlockAtlas
+        atlas: &BlockAtlas,
     ) -> Option<BlockDefinition> {
         let id = self
             .names
@@ -69,7 +75,11 @@ impl BlockRegistryInner {
             .expect("failed to register {name} because frozen name registry");
         let resolved = block_textures.resolve(tex_registry, atlas).unwrap();
 
-        let def = BlockDefinition { textures: resolved, opaque, emission: if name == "core:stone2" {15} else {0}};
+        let def = BlockDefinition {
+            textures: resolved,
+            opaque,
+            emission: if name == "core:stone2" { 15 } else { 0 },
+        };
 
         let cloned = def.clone();
         self.definitions.insert_with_id(id, def);
@@ -91,14 +101,20 @@ impl BlockRegistryInner {
             )
             .unwrap();
     }
-    
+
+    pub fn get_id(&self, name: impl Into<String>) -> Option<BlockId> {
+        self.names.name_to_id(&name.into())
+    }
+
     pub fn get_block(&self, id: BlockId) -> Option<&BlockDefinition> {
         self.definitions.get(id)
     }
-    
+
+    // pub fn get_block_by_name(&self, name: impl Into<String>) -> Option<&BlockDefinition> {
+
+    // }
+
     pub fn is_opaque(&self, id: BlockId) -> bool {
-        self.get_block(id)
-            .map(|block| block.opaque)
-            .unwrap_or(true)
+        self.get_block(id).map(|block| block.opaque).unwrap_or(true)
     }
 }
