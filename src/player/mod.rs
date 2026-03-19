@@ -72,7 +72,7 @@ fn spawn_player(mut commands: Commands) {
         }),
         PlayerCamera::default(),
         ChunkViewer {
-            horizontal_radius: 4,
+            horizontal_radius: 16,
         },
     ));
 }

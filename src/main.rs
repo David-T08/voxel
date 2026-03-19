@@ -18,6 +18,7 @@ mod registry_base;
 mod simulation;
 mod textures;
 mod world;
+mod ui;
 
 pub use world::VOXEL_SIZE;
 
@@ -45,6 +46,7 @@ fn main() {
         .add_plugins(debugging::DebuggingPlugin)
         .add_plugins(player::PlayerPlugin)
         .add_plugins(world::WorldPlugin)
+        .add_plugins(ui::UiPlugin)
         .add_plugins(simulation::SimulationPlugin)
         .run();
 }

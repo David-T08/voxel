@@ -70,7 +70,7 @@ impl<I: RegistryId> NameRegistry<I> {
 
 #[derive(Debug)]
 pub struct LookupRegistry<I: RegistryId, V> {
-    entries: Vec<Option<V>>,
+    pub entries: Vec<Option<V>>,
 
     frozen: bool,
     _marker: PhantomData<I>,

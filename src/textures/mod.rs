@@ -211,6 +211,21 @@ impl BlockTextures {
             self.right,
         ]
     }
+    
+    pub fn get_uvs_flat(&self) -> [[f32; 2]; 24] {
+        let faces = self.get_uvs();
+        let mut flat = [[0.0; 2]; 24];
+    
+        let mut i = 0;
+        for face in faces {
+            for uv in face {
+                flat[i] = uv;
+                i += 1;
+            }
+        }
+    
+        flat
+    }
 }
 
 pub struct TexturePlugin;
