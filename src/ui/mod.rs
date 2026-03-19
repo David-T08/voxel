@@ -1,6 +1,6 @@
 use bevy::{input_focus::InputFocus, prelude::*};
 
-use crate::ui::screens::hotbar;
+use crate::{blocks::{BlockRegistry, BlockRegistryReady}, textures::{BlockTextureRegistryReady, atlas::BlockAtlas}, ui::screens::hotbar};
 
 pub mod components;
 pub mod screens;
@@ -10,7 +10,31 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<InputFocus>()
-            .add_systems(Startup, setup);
+            .add_systems(
+                Startup, 
+                (
+                    setup,
+                    components::block_viewport::setup,
+                    hotbar::init,
+                    )
+            )
+            .add_systems(
+                Update,
+                (
+                        components::block_viewport::populate,
+                        components::block_viewport::bake_images,
+                        components::block_viewport::finalize_bake
+                    )
+                    .run_if(resource_exists::<BlockAtlas>)
+                    .run_if(resource_exists::<BlockRegistryReady>)
+                    .run_if(resource_exists::<BlockTextureRegistryReady>)
+                    .chain()
+            )
+            .add_systems(
+                Update,
+                hotbar::populate_hotbar_icons
+            );
+            
     }
 }
 
@@ -22,5 +46,5 @@ fn setup(mut commands: Commands) {
             ..default()
         }
     ));
-    hotbar::init(commands);
+
 }

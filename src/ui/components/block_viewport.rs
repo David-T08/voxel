@@ -1,6 +1,6 @@
 // TODO: Make it dynamic eventually
 
-use bevy::{asset::RenderAssetUsages, camera::{RenderTarget, ScalingMode}, mesh::Indices, prelude::*, render::render_resource::TextureFormat};
+use bevy::{asset::RenderAssetUsages, camera::{RenderTarget, ScalingMode, visibility::RenderLayers}, mesh::Indices, prelude::*, render::render_resource::TextureFormat};
 use crate::{blocks::{BlockId, BlockRegistry}, registry_base::{LookupRegistry, RegistryId}, textures::atlas::BlockAtlas};
 
 
@@ -26,6 +26,7 @@ pub struct BlockIconCache {
     
     needs_rebake: bool,
     queued_blocks: Vec<BlockId>,
+    locked: bool,
     
     meshes: Vec<Entity>,
 }
@@ -73,7 +74,13 @@ pub fn setup(
         },
         Transform::from_xyz(center.x, 100.0, center.z)
             .looking_at(center, Vec3::NEG_Z),
-        RenderTarget::Image(handle.clone().into())
+        RenderTarget::Image(handle.clone().into()),
+        RenderLayers::layer(10)
+    ));
+    
+    commands.spawn((
+        DirectionalLight::default(),
+        RenderLayers::layer(10)
     ));
     
     commands.insert_resource(BlockIconCache {
@@ -81,11 +88,27 @@ pub fn setup(
         atlas: handle,
         
         needs_rebake: false,
+        locked: false,
         queued_blocks: Vec::new(),
         meshes: Vec::new()
     });
     
     commands.insert_resource(BlockBakeState::Idle);
+}
+
+pub fn populate(
+    mut cache: ResMut<BlockIconCache>,
+    blocks: Res<BlockRegistry>
+) {
+    // TODO: not do this
+    if cache.locked {
+        return
+    }
+    
+    cache.populate(&blocks);
+    cache.locked = true;
+    
+    cache.mark_rebake();
 }
 
 pub fn bake_images(
@@ -124,6 +147,7 @@ pub fn bake_images(
         
         let entity = commands
             .spawn((
+                RenderLayers::layer(10),
                 Mesh3d(cube),
                 MeshMaterial3d(material.clone()),
                 Transform::from_translation(Vec3::new(
@@ -167,10 +191,10 @@ impl BlockIconCache {
     }
     
     pub fn populate(&mut self, blocks: &BlockRegistry) {
-        if self.needs_rebake {
+        if self.needs_rebake || self.locked {
             return;
         }
-        
+  
         self.queued_blocks.clear();
         
         let max = blocks.definitions.entries.len().min(MAX_TEXTURE_CACHE + 1);
