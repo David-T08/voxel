@@ -10,12 +10,14 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<InputFocus>()
+            .add_plugins(
+                hotbar::CoreHotbarPlugin
+            )
             .add_systems(
                 Startup, 
                 (
                     setup,
                     components::block_viewport::setup,
-                    hotbar::init,
                     )
             )
             .add_systems(
@@ -29,10 +31,6 @@ impl Plugin for UiPlugin {
                     .run_if(resource_exists::<BlockRegistryReady>)
                     .run_if(resource_exists::<BlockTextureRegistryReady>)
                     .chain()
-            )
-            .add_systems(
-                Update,
-                hotbar::populate_hotbar_icons
             );
             
     }

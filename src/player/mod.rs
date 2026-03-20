@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::CursorOptions};
+use bevy::{prelude::*};
 
 use crate::blocks::BlockRegistry;
 use crate::simulation::body_3D::{BoxCollider3D, CharacterBody3D};
@@ -38,6 +38,7 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn_player(mut commands: Commands) {
+    commands.init_resource::<input::PlayerInput>();
     commands.spawn((
         Player,
         Transform {
@@ -45,7 +46,6 @@ fn spawn_player(mut commands: Commands) {
             ..Default::default()
         },
         GlobalTransform::default(),
-        input::PlayerInput::default(),
         CharacterBody3D::default(),
         BoxCollider3D::new(Vec3::new(0.55, 1.35, 0.55)),
         controller::PlayerController {
@@ -72,7 +72,7 @@ fn spawn_player(mut commands: Commands) {
         }),
         PlayerCamera::default(),
         ChunkViewer {
-            horizontal_radius: 16,
+            horizontal_radius: 12,
         },
     ));
 }

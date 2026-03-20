@@ -29,7 +29,7 @@ pub fn update(
     mut player: Single<&mut Transform, With<Player>>,
     camera: Single<(&mut Transform, &mut PlayerCamera), Without<Player>>,
     window: Single<&Window, With<PrimaryWindow>>,
-    input: Single<&PlayerInput>,
+    input: Res<PlayerInput>,
 ) {
     if !window.focused {
         mouse_motion_events.clear();
@@ -61,7 +61,7 @@ pub fn update(
         player.rotation * Quat::from_euler(EulerRot::YXZ, 0.0, player_camera.pitch, 0.0);
 }
 
-pub fn set_mouse(mut cursor: Single<&mut CursorOptions>, input: Single<&PlayerInput>) {
+pub fn set_mouse(mut cursor: Single<&mut CursorOptions>, input: Res<PlayerInput>) {
     match input.mouse.cursor_unlocked {
         false => {
             cursor.grab_mode = bevy::window::CursorGrabMode::Confined;

@@ -67,10 +67,11 @@ pub fn drive_character_body(
 }
 
 pub fn tick(
-    player: Single<(&mut PlayerController, &mut PlayerInput, &CharacterBody3D), With<Player>>,
+    player: Single<(&mut PlayerController, &CharacterBody3D), With<Player>>,
+    mut input: ResMut<PlayerInput>,
     time: Res<Time<Fixed>>,
 ) {
-    let (mut controller, mut input, body) = player.into_inner();
+    let (mut controller, body) = player.into_inner();
     let input = &mut input.movement;
 
     controller.flying = input.set_fly;

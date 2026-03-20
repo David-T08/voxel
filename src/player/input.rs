@@ -29,14 +29,14 @@ pub struct MouseInput {
     pub cursor_unlocked: bool,
 }
 
-#[derive(Component, Default)]
+#[derive(Resource, Default)]
 pub struct PlayerInput {
     pub movement: MoveInput,
     pub mouse: MouseInput,
 }
 
 pub fn capture(
-    mut input: Single<&mut PlayerInput, With<Player>>,
+    mut input: ResMut<PlayerInput>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
     time: Res<Time>,

@@ -1,20 +1,19 @@
 use bevy::prelude::*;
 
 use crate::{
-    blocks::BlockRegistry,
-    chunks::{
+    blocks::{BlockId, BlockRegistry}, chunks::{
         ChunkPos,
         streaming::{self, ChunkStreamingState},
-    },
-    player::{Player, input::PlayerInput, interaction::selection::CurrentBlockTarget},
-    world::WorldState,
+    }, player::{Player, input::PlayerInput, interaction::selection::CurrentBlockTarget}, ui::screens::hotbar::{HotbarIcon, HotbarSlot, SelectedHotbarSlot}, world::WorldState
 };
 
 pub fn tick(
     mut streaming_state: ResMut<ChunkStreamingState>,
     mut world: ResMut<WorldState>,
+    
+    selected: Single<&HotbarSlot, With<SelectedHotbarSlot>>,
 
-    input: Single<&PlayerInput, With<Player>>,
+    input: Res<PlayerInput>,
     block_reg: Res<BlockRegistry>,
     target: Res<CurrentBlockTarget>,
 ) {
@@ -29,7 +28,7 @@ pub fn tick(
             new.x,
             new.y,
             new.z,
-            block_reg.names.name_to_id("core:stone2").unwrap(),
+            selected.block,
         );
         streaming::mark_chunk_and_neighbors_for_light(
             &mut world,

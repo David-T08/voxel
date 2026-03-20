@@ -14,7 +14,7 @@ pub fn tick(
     mut streaming_state: ResMut<ChunkStreamingState>,
     mut world: ResMut<WorldState>,
 
-    input: Single<&PlayerInput, With<Player>>,
+    input: Res<PlayerInput>,
     target: Res<CurrentBlockTarget>,
 ) {
     if let Some(target) = **target {

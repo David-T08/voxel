@@ -72,7 +72,7 @@ pub fn setup(
         }),
         Camera {
             order: -1,
-            clear_color: Color::WHITE.into(),
+            clear_color: Color::NONE.into(),
             ..default()
         },
         Transform {

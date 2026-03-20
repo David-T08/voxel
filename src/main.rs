@@ -37,7 +37,10 @@ fn main() {
 
     App::new()
         .add_plugins((
-            DefaultPlugins.build().disable::<LogPlugin>(),
+            DefaultPlugins
+                .build()
+                .set(ImagePlugin::default_nearest())
+                .disable::<LogPlugin>(),
             MaterialPlugin::<VoxelMaterial>::default(),
         ))
         .add_plugins(chunks::ChunkPlugin)

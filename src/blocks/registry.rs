@@ -78,7 +78,7 @@ impl BlockRegistryInner {
         let def = BlockDefinition {
             textures: resolved,
             opaque,
-            emission: if name == "core:stone2" { 15 } else { 0 },
+            emission: if name == "core:glowstone" { 15 } else { 0 },
         };
 
         let cloned = def.clone();
